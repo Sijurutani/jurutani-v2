@@ -1,0 +1,93 @@
+/* ═══════════════════════════════════════════════════════════
+   JuruTani v2 — Global CSS
+   Diimport via nuxt.config.ts → css: ['~/assets/css/main.css']
+═══════════════════════════════════════════════════════════ */
+
+@import "@nuxt/ui";
+@import "tailwindcss";
+
+/* ─── CSS Variables ─────────────────────────────────────────── */
+:root {
+  --auth-shell-bg: #ffffff;
+  --auth-pane-bg: #ffffff;
+  --text-base: #111827;
+}
+
+.dark {
+  --auth-shell-bg: #0a0a0a;
+  --auth-pane-bg: #0f1117;
+  --text-base: #f9fafb;
+}
+
+/* ─── Scroll Reveal Animations ──────────────────────────────── */
+.app-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s ease;
+}
+
+.app-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.app-reveal--2 {
+  transition-delay: 0.15s;
+}
+
+/* ─── Ambient Orb Animations ─────────────────────────────────── */
+@keyframes orb-drift {
+  0%,
+  100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  33% {
+    transform: translateY(-18px) translateX(10px);
+  }
+  66% {
+    transform: translateY(10px) translateX(-12px);
+  }
+}
+
+.animate-orb-drift {
+  animation: orb-drift 12s ease-in-out infinite;
+}
+
+.ambient-orb--slow {
+  animation-duration: 18s;
+}
+
+.ambient-orb--reverse {
+  animation-direction: reverse;
+  animation-duration: 15s;
+}
+
+/* ─── Sweep Badge Animation (auth layout) ─────────────────── */
+@keyframes sweep-light {
+  0% {
+    left: -140%;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    left: 140%;
+    opacity: 0;
+  }
+}
+
+.animate-sweep-light {
+  animation: sweep-light 3.5s ease-in-out 1s infinite;
+}
+
+/* ─── Performance Section ────────────────────────────────────── */
+.perf-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 400px;
+}
