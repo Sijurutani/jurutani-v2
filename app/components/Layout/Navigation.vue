@@ -25,7 +25,7 @@
 
   const { navsPrimary, navsSecondary } = useNavMenu()
   const authStore = useAuthStore()
-  const toast = useToast()
+  const toast = useJuruTaniToast()
   const route = useRoute()
 
   // --- Lifecycle ---
@@ -103,9 +103,13 @@
         showLogoutModal.value = false
         await navigateTo('/')
       } else {
-        toast.error('Gagal logout')
+        toast.error(result.error || 'Gagal logout')
         console.error('Logout failed:', result.error)
       }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Gagal logout. Coba lagi.',
+      )
     } finally {
       logoutLoading.value = false
     }
@@ -690,7 +694,7 @@
     </Transition>
 
     <!-- ═══════════════════════ LOGOUT CONFIRMATION MODAL ═══════════════════════ -->
-    <CommonLogoutConfirmModal
+    <UiLogoutModal
       v-model="showLogoutModal"
       :loading="logoutLoading"
       @confirm="doLogout"

@@ -409,13 +409,12 @@
         </UButton>
       </div>
 
-      <!-- Content with UEditor (read-only) -->
-      <article class="mb-12">
+      <article class="mb-12 news-content">
         <UEditor
           :model-value="news.content"
           :editable="false"
           content-type="json"
-          class="prose prose-lg dark:prose-invert max-w-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:border-0 [&_.ProseMirror]:p-0"
+          class="prose dark:prose-invert max-w-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:border-0 [&_.ProseMirror]:p-0"
         />
       </article>
 
@@ -553,7 +552,7 @@
         v-if="similarNews && similarNews.length > 0"
         class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 auto-rows-auto"
       >
-        <FeaturesUpdateCard
+        <FeaturesContentNews
           v-for="item in similarNews"
           :key="item.id"
           :news="item"
@@ -668,3 +667,56 @@
     </Teleport>
   </main>
 </template>
+
+<style scoped>
+/*
+  Override Tailwind Typography (prose) spacing.
+  Default prose-lg memberi margin-top ~1.333em tiap paragraf,
+  sehingga terasa terlalu jauh. Kita kompreskan ke nilai normal.
+*/
+.news-content :deep(.ProseMirror) {
+  /* Reset semua margin atas default prose */
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.news-content :deep(.ProseMirror p) {
+  margin-top: 0.6em;
+  margin-bottom: 0.6em;
+}
+
+.news-content :deep(.ProseMirror p:first-child) {
+  margin-top: 0;
+}
+
+.news-content :deep(.ProseMirror h1),
+.news-content :deep(.ProseMirror h2),
+.news-content :deep(.ProseMirror h3),
+.news-content :deep(.ProseMirror h4) {
+  margin-top: 1.4em;
+  margin-bottom: 0.4em;
+}
+
+.news-content :deep(.ProseMirror ul),
+.news-content :deep(.ProseMirror ol) {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  padding-left: 1.5em;
+}
+
+.news-content :deep(.ProseMirror li) {
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+}
+
+.news-content :deep(.ProseMirror blockquote) {
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+.news-content :deep(.ProseMirror img) {
+  margin-top: 1em;
+  margin-bottom: 1em;
+  border-radius: 0.5rem;
+}
+</style>

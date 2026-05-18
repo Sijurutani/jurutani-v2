@@ -904,7 +904,7 @@
           v-if="similarProducts && similarProducts.length > 0"
           class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
         >
-          <FeaturesMarketsCard
+          <FeaturesContentMarkets
             v-for="item in similarProducts"
             :key="item.id"
             :product="item"
@@ -927,7 +927,7 @@
         </div>
 
         <!-- No Similar Products -->
-        <UiNotFoundData v-else />
+        <UiNotFound v-else />
       </section>
     </div>
 

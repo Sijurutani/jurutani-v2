@@ -1,7 +1,7 @@
 <script setup lang="ts">
 
   import type { SortOption } from '~/types/content'
-  import { toastStore } from '~/composables/useJuruTaniToast'
+  import { useJuruTaniToast } from '~/composables/useJuruTaniToast'
   import { Enum } from '~/utils/enum'
 
   useSeoMeta({
@@ -25,6 +25,7 @@
 
   const supabase = useSupabaseClient()
   const pageSize = 10
+  const toast = useJuruTaniToast()
 
   const route = useRoute()
   const router = useRouter()
@@ -122,7 +123,7 @@
       } = await supabase.auth.getUser()
       if (!user) {
         userError.value = 'User tidak ditemukan'
-        toastStore.error(
+        toast.error(
           'Tidak dapat memuat data pengguna. Silakan login kembali.',
         )
         return
@@ -131,7 +132,7 @@
     } catch (err) {
       console.error('Error fetching current user:', err)
       userError.value = err
-      toastStore.error('Gagal memuat data pengguna.')
+      toast.error('Gagal memuat data pengguna.')
     } finally {
       isUserLoading.value = false
     }

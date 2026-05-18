@@ -1,4 +1,4 @@
-import type { FaqCategory, FaqData, IconCard } from './types'
+import type { FaqCategory, FaqData } from './types'
 
 /**
  * FAQ Data - Help & Support

@@ -589,8 +589,8 @@
           </div>
 
           <div class="wx-chart-card">
-            <UiLoadingData v-if="isHourlyLoading" message="Memuat grafik..." />
-            <UiNotFoundData v-else-if="hourlyError" :message="hourlyError" />
+            <UiLoading v-if="isHourlyLoading" message="Memuat grafik..." />
+            <UiNotFound v-else-if="hourlyError" :message="hourlyError" />
             <div v-else-if="hourlyData?.length">
               <!-- Weather icons row -->
               <div class="wx-chart-icons">
@@ -747,8 +747,8 @@
               </div>
             </div>
 
-            <UiLoadingData v-if="isForecastLoading" message="Memuat ramalan..." />
-            <UiNotFoundData v-else-if="forecastError" :message="forecastError" />
+            <UiLoading v-if="isForecastLoading" message="Memuat ramalan..." />
+            <UiNotFound v-else-if="forecastError" :message="forecastError" />
             <div v-else-if="forecastData?.length" class="flex flex-col gap-2">
               <div
                 v-for="(day, idx) in forecastData"

@@ -254,25 +254,18 @@
 </script>
 
 <template>
-  <main class="markets-page container mx-auto px-4 py-12">
+  <main class="markets-page container mx-auto px-4 pt-32 pb-12">
     <!-- Header -->
     <header class="mx-auto mb-8 max-w-4xl text-center">
-      <div
-        class="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-linear-to-r from-emerald-100 to-teal-100 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-full"
-      >
-        <UIcon
-          name="i-lucide-shopping-bag"
-          class="w-5 h-5 text-emerald-600 dark:text-emerald-400"
-        />
-        <span class="text-sm font-medium text-emerald-700 dark:text-emerald-300"
-          >Marketplace Petani Terpercaya</span
-        >
+      <div class="page-hero-badge">
+        <span class="page-hero-badge__dot" />
+        <span>Marketplace Petani Terpercaya</span>
+        <span class="page-hero-badge__sweep" aria-hidden="true" />
       </div>
 
-      <h1
-        class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 bg-linear-to-r from-emerald-700 via-teal-600 to-cyan-600 bg-clip-text text-transparent"
-      >
-        Pasar Tani JuruTani
+      <h1 class="page-hero-title">
+        Pasar Tani<br />
+        <span class="page-hero-title__accent">JuruTani</span>
       </h1>
 
       <p
@@ -340,15 +333,15 @@
         Daftar Produk Pasar Tani
       </h2>
 
-      <UiLoadingData v-if="pending" />
-      <UiErrorData v-else-if="error" :error="error.message" />
-      <UiNotFoundData v-else-if="!hasData" />
+      <UiLoading v-if="pending" />
+      <UiError v-else-if="error" :error="error.message" />
+      <UiNotFound v-else-if="!hasData" />
 
       <div
         v-else
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 auto-rows-auto grid-flow-row-dense"
       >
-        <FeaturesMarketsCard
+        <FeaturesContentMarkets
           v-for="(product, index) in data.items"
           :key="product.id"
           :product="product"
@@ -385,3 +378,89 @@
     <UiButtonCreate />
   </main>
 </template>
+
+<style scoped>
+  @reference "tailwindcss";
+
+  .page-hero-title {
+    font-size: clamp(2.25rem, 5vw, 3.75rem);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: theme('colors.gray.900');
+    margin-bottom: 1.25rem;
+  }
+
+  .dark .page-hero-title {
+    color: theme('colors.gray.50');
+  }
+
+  .page-hero-title__accent {
+    display: block;
+    background: linear-gradient(135deg, theme('colors.emerald.500'), theme('colors.teal.400'), theme('colors.cyan.500'));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .page-hero-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.875rem;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 9999px;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: theme('colors.emerald.700');
+    box-shadow: 0 2px 12px rgba(16, 185, 129, 0.1);
+    margin-bottom: 1.5rem;
+  }
+
+  .dark .page-hero-badge {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: theme('colors.emerald.300');
+    box-shadow: 0 2px 12px rgba(52, 211, 153, 0.15);
+  }
+
+  .page-hero-badge__dot {
+    display: block;
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background: theme('colors.emerald.500');
+    flex-shrink: 0;
+    animation: dot-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes dot-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  .page-hero-badge__sweep {
+    position: absolute;
+    top: 0; left: 0;
+    width: 55%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%);
+    border-radius: inherit;
+    pointer-events: none;
+    animation: badge-sweep 3.5s ease-in-out infinite;
+  }
+
+  @keyframes badge-sweep {
+    0%   { transform: translateX(-200%); opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { transform: translateX(280%); opacity: 0; }
+  }
+</style>

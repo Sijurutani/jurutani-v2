@@ -6,6 +6,10 @@ export default defineNuxtConfig({
   // ─── Nuxt 4 App Directory ───────────────────────────────────────────────
   future: { compatibilityVersion: 4 },
 
+  experimental: {
+    appManifest: false,
+  },
+
   // ─── Modules ─────────────────────────────────────────────────────────────
   modules: [
     '@nuxt/ui',
@@ -26,33 +30,12 @@ export default defineNuxtConfig({
   supabase: {
     url: process.env.SUPABASE_URL,
     key: process.env.SUPABASE_KEY,
-    serviceKey: process.env.SUPABASE_SECRET_KEY,
+    secretKey: process.env.SUPABASE_SECRET_KEY,
     types: '~/types/database.types.ts',
     redirectOptions: {
       login: '/auth/login',
       callback: '/auth/callback',
-      exclude: [
-        '/',
-        '/update',
-        '/update/*',
-        '/markets',
-        '/markets/*',
-        '/discussions',
-        '/discussions/*',
-        '/weathers',
-        '/food-prices',
-        '/about-us',
-        '/contact-us',
-        '/help-faqs',
-        '/privacy-policy',
-        '/terms',
-        '/courses',
-        '/courses/*',
-        '/videos',
-        '/videos/*',
-        '/tools',
-        '/tools/*',
-      ],
+      include: ['/profile', '/profile/'],
     },
   },
 

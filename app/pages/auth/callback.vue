@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { toastStore } from '~/composables/useJuruTaniToast'
 
   definePageMeta({
     layout: 'auth',
@@ -13,6 +12,7 @@
   })
 
   const authStore = useAuthStore()
+  const toast = useJuruTaniToast()
   const loading = ref(true)
   const statusMessage = ref('Memproses login...')
 
@@ -50,7 +50,7 @@
       const user = authStore.user
 
       if (!user) {
-        toastStore.error(
+        toast.error(
           'Login gagal atau sesi tidak ditemukan. Silakan coba lagi.',
           5000,
         )
@@ -63,12 +63,12 @@
 
       const fullName =
         authStore.displayName || user.email?.split('@')[0] || 'Petani Hebat'
-      toastStore.success(`Selamat datang, ${fullName}!`, 3000)
+      toast.success(`Selamat datang, ${fullName}!`, 3000)
 
       statusMessage.value = 'Mengarahkan...'
       await navigateTo('/')
     } catch (err: any) {
-      toastStore.error(
+      toast.error(
         'Terjadi kesalahan: ' + (err?.message || 'Error tidak diketahui'),
         5000,
       )

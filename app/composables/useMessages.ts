@@ -1,4 +1,5 @@
 import type { Database } from '~/types/database.types'
+import { uploadChatImageFile } from '~/utils/storage'
 
 type ProfileLite = Pick<
   Database['public']['Tables']['profiles']['Row'],
@@ -17,20 +18,12 @@ export type MessageWithSender = MessageRow & { sender: ProfileLite }
 
 const ADMIN_USERNAME = 'jurutaniku'
 
-function cleanFileName(name: string) {
-  return name.replace(/[^a-zA-Z0-9.\-_]/g, '_')
-}
-
 export const useMessages = () => {
   const supabase = useSupabaseClient<Database>()
   const authStore = useAuthStore()
 
   const myId = computed(
-    () =>
-      authStore.user?.value?.sub ||
-      authStore.user?.value?.id ||
-      authStore.user?.value?.user?.id ||
-      authStore.computedProfile?.id,
+    () => authStore.user?.id || authStore.profile?.id || authStore.computedProfile?.id,
   )
 
   const loadingConversations = ref(false)
@@ -170,14 +163,8 @@ export const useMessages = () => {
     conversationId: string,
     file: File,
   ): Promise<string> {
-    const fileName = `${Date.now()}_${cleanFileName(file.name)}`
-    const path = `${conversationId}/${fileName}`
-    const { error } = await supabase.storage
-      .from('chat-images')
-      .upload(path, file, { upsert: false, contentType: file.type })
-    if (error) throw error
-    const { data } = supabase.storage.from('chat-images').getPublicUrl(path)
-    return data.publicUrl
+    // Delegasikan ke storage.ts — path & naming dikelola secara terpusat
+    return await uploadChatImageFile(conversationId, file)
   }
 
   async function sendMessage(params: {

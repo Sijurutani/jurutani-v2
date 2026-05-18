@@ -1,136 +1,180 @@
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue'
-  import type { Database } from '~/types/database.types'
+import type { InstructorRow, ExpertRow } from '~/types/database.types'
 
-  const authStore = useAuthStore()
-  const supabase = useSupabaseClient<Database>()
+// ─── Composables ─────────────────────────────────────────────────────────────
 
-  useSeoMeta({
-    title: 'Profil Saya',
-    description: 'Kelola profil petani, peternak, atau nelayan Anda di JuruTani. Edit informasi pribadi, atur preferensi komoditas, dan perbarui data usaha tani.'
-  })
+const authStore = useAuthStore()
+const { fetchProfessionalByRole } = useProfessionalProfile()
 
-  const userData = computed(() => authStore.profile)
-  const loading = computed(() => authStore.profileLoading)
-  const error = computed(() => authStore.error)
+// ─── SEO & Route ─────────────────────────────────────────────────────────────
 
-  const fetchUserData = async () => {
-    await authStore.fetchProfile()
-  }
+useSeoMeta({
+  title: 'Profil Saya',
+  description:
+    'Kelola profil petani, peternak, atau nelayan Anda di JuruTani. Edit informasi pribadi, atur preferensi komoditas, dan perbarui data usaha tani.',
+})
 
-  const formatDate = (dateString?: string | null) => {
-    if (!dateString) return '-'
-    return new Intl.DateTimeFormat('id-ID', {
-      dateStyle: 'long',
-    }).format(new Date(dateString))
-  }
+definePageMeta({
+  middleware: ['auth'],
+})
 
-  const professionalData = ref<{ type: string; data: any } | null>(null)
-  const professionalPending = ref(false)
+// ─── Auth state ──────────────────────────────────────────────────────────────
 
-  const fetchProfessionalData = async () => {
-    if (!userData.value?.id) return
-    professionalPending.value = true
+const userData = computed(() => authStore.profileView)
+const loading = computed(() => authStore.profileLoading)
+const storeError = computed(() => authStore.error)
 
-    try {
-      const role = userData.value.role
-      if (role === 'pakar') {
-        const { data } = await supabase
-          .from('experts')
-          .select('*')
-          .eq('user_id', userData.value.id)
-          .maybeSingle()
-        professionalData.value = { type: 'pakar', data }
-      } else if (role === 'penyuluh') {
-        const { data } = await supabase
-          .from('instructors')
-          .select('*')
-          .eq('user_id', userData.value.id)
-          .maybeSingle()
-        professionalData.value = { type: 'penyuluh', data }
-      } else {
-        professionalData.value = null
-      }
-    } catch (error) {
-      console.error('Error fetching professional data:', error)
-    } finally {
-      professionalPending.value = false
+// FIX #1: Hapus fetchUserData() yang memanggil authStore.fetchProfile() manual.
+// authStore sudah punya watch(supabaseUser) yang auto-fetch saat user tersedia.
+// Memanggil ulang dari sini hanya buang network request dan bisa race condition.
+// Satu-satunya alasan memanggil ulang adalah setelah user update profil sendiri —
+// itulah yang handleProfileUpdate() di bawah lakukan.
+
+// ─── Role helpers ─────────────────────────────────────────────────────────────
+
+const isPakar = computed(() => userData.value?.role === 'pakar')
+const isPenyuluh = computed(() => userData.value?.role === 'penyuluh')
+const showProfessionalTab = computed(() => isPakar.value || isPenyuluh.value)
+const isAdmin = computed(() => userData.value?.is_admin === true)
+
+// ─── Professional data ───────────────────────────────────────────────────────
+
+type ProfessionalData =
+  | { type: 'pakar'; data: ExpertRow }
+  | { type: 'penyuluh'; data: InstructorRow }
+  | null
+
+const professionalData = ref<ProfessionalData>(null)
+const professionalPending = ref(false)
+
+// FIX #5: Rename catch parameter 'error' → 'fetchErr'
+// agar tidak men-shadow 'storeError' computed dari store di scope luar.
+const professionalError = ref<string | null>(null)
+
+const fetchProfessionalData = async () => {
+  if (!userData.value?.id) return
+
+  professionalPending.value = true
+  professionalError.value = null
+  professionalData.value = null
+
+  try {
+    const result = await fetchProfessionalByRole(
+      userData.value.role,
+      userData.value.id,
+    )
+
+    if (result.type === 'none') return
+
+    if (result.error) {
+      professionalError.value = result.error.message
+      return
     }
-  }
 
-  const isValidUrl = (string?: string | null) => {
-    if (!string) return false
-    try {
-      new URL(string.startsWith('http') ? string : `https://${string}`)
-      return true
-    } catch (_) {
-      return false
+    if (result.data) {
+      // FIX #4: Cast narrowed sesuai type, bukan pakai 'as any' di template.
+      // Sekarang professionalData.data sudah typed dengan benar sehingga
+      // akses ke .note, .category, .provinces, .district aman di template.
+      professionalData.value = {
+        type: result.type,
+        data: result.data,
+      } as ProfessionalData
     }
+  } catch (fetchErr) {
+    professionalError.value =
+      fetchErr instanceof Error
+        ? fetchErr.message
+        : 'Gagal memuat data profesional'
+  } finally {
+    professionalPending.value = false
   }
+}
 
-  // Active tab state
-  const activeTab = ref('personal')
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
 
-  // Modal states
-  const showEditPersonalModal = ref(false)
-  const showEditProfessionalModal = ref(false)
+const activeTab = ref('personal')
 
-  // Computed untuk menentukan apakah user adalah pakar atau penyuluh
-  const isPakar = computed(() => {
-    return userData.value?.role === 'pakar'
-  })
+// FIX #3: 'tabs' tidak perlu computed — nilainya statis, tidak bergantung
+// reactive state apapun. Gunakan const biasa.
+const tabs = [
+  {
+    label: 'Profil Pribadi',
+    icon: 'i-lucide-user',
+    value: 'personal',
+  },
+]
 
-  const isPenyuluh = computed(() => {
-    return userData.value?.role === 'penyuluh'
-  })
+// ─── Modal states ─────────────────────────────────────────────────────────────
 
-  const showProfessionalTab = computed(() => {
-    return isPakar.value || isPenyuluh.value
-  })
+const showEditPersonalModal = ref(false)
+const showEditProfessionalModal = ref(false)
+const showAvatarModal = ref(false)
 
-  // Tabs configuration
-  const tabs = computed(() => {
-    const baseTabs = [
-      {
-        label: 'Profil Pribadi',
-        icon: 'i-lucide-user',
-        value: 'personal',
-      },
-    ]
-    return baseTabs
-  })
+const openEditPersonalModal = () => (showEditPersonalModal.value = true)
+const openEditProfessionalModal = () => (showEditProfessionalModal.value = true)
 
-  const handleImageError = (event: Event) => {
-    const target = event?.target as HTMLImageElement | null
-    if (target) {
-      console.error('Profile image failed to load:', target.src)
-      target.src = '/profile.webp'
-    }
+// ─── Handlers ────────────────────────────────────────────────────────────────
+
+const handleProfileUpdate = async () => {
+  // Ini satu-satunya tempat yang perlu fetch ulang secara manual —
+  // user baru saja mengubah datanya sendiri lewat form.
+  await authStore.fetchProfile()
+  showEditPersonalModal.value = false
+}
+
+const handleProfessionalUpdate = async () => {
+  await fetchProfessionalData()
+  showEditProfessionalModal.value = false
+}
+
+const handleAvatarUpdate = async () => {
+  await authStore.fetchProfile()
+  showAvatarModal.value = false
+}
+
+// Deteksi apakah profile.value ada di DB atau hanya dari user_metadata.
+// Jika null, berarti row belum ada / fetch gagal — data dari OAuth metadata saja.
+const isProfileFromMetadataOnly = computed(() => !authStore.profile)
+
+// ─── Utils ───────────────────────────────────────────────────────────────────
+
+const formatDate = (dateString?: string | null) => {
+  if (!dateString) return '-'
+  return new Intl.DateTimeFormat('id-ID', { dateStyle: 'long' }).format(
+    new Date(dateString),
+  )
+}
+
+const isValidUrl = (string?: string | null) => {
+  if (!string) return false
+  try {
+    new URL(string.startsWith('http') ? string : `https://${string}`)
+    return true
+  } catch {
+    return false
   }
+}
 
-  const handleProfileUpdate = async () => {
-    await fetchUserData()
-    showEditPersonalModal.value = false
-  }
+const handleImageError = (event: Event) => {
+  const target = event?.target as HTMLImageElement | null
+  if (target) target.src = '/profile.webp'
+}
 
-  const handleProfessionalUpdate = async () => {
-    await fetchProfessionalData()
-    showEditProfessionalModal.value = false
-  }
+// ─── Init ────────────────────────────────────────────────────────────────────
 
-  const openEditPersonalModal = () => {
-    showEditPersonalModal.value = true
-  }
-
-  const openEditProfessionalModal = () => {
-    showEditProfessionalModal.value = true
-  }
-
-  onMounted(() => {
-    fetchUserData().then(() => {
+// FIX #2: Ganti onMounted chain .then() yang tidak aman dengan watch.
+// watch menunggu userData benar-benar tersedia sebelum fetch professional,
+// termasuk kasus SSR di mana authStore.fetchProfile() belum selesai
+// saat onMounted dipanggil. { once: true } agar hanya jalan sekali di awal.
+watch(
+  userData,
+  (newVal) => {
+    if (newVal?.id) {
       fetchProfessionalData()
-    })
-  })
+    }
+  },
+  { immediate: true, once: true },
+)
 </script>
 
 <template>
@@ -150,6 +194,8 @@
         </p>
       </div>
 
+
+      <!-- Loading state -->
       <div v-if="loading" class="text-center py-16">
         <div
           class="inline-flex items-center px-6 py-3 bg-white dark:bg-gray-900 rounded-lg shadow-sm dark:shadow-md border border-gray-100 dark:border-gray-800"
@@ -158,15 +204,18 @@
             name="i-lucide-refresh-cw"
             class="animate-spin -ml-1 mr-3 h-5 w-5 text-green-600 dark:text-green-400"
           />
-          <span class="text-gray-600 dark:text-gray-400"
-            >Memuat profil pengguna...</span
-          >
+          <span class="text-gray-600 dark:text-gray-400">
+            Memuat profil pengguna...
+          </span>
         </div>
       </div>
 
-      <div v-else-if="error" class="max-w-2xl mx-auto">
+      
+
+      <!-- Error state -->
+      <div v-else-if="storeError" class="max-w-2xl mx-auto">
         <div
-          class="bg-red-50 dark:bg-red-950/30 border-l-4 border-red-400 dark:border-red-600 p-4 rounded-lg transition-colors duration-200"
+          class="bg-red-50 dark:bg-red-950/30 border-l-4 border-red-400 dark:border-red-600 p-4 rounded-lg"
         >
           <div class="flex">
             <div class="shrink-0">
@@ -179,12 +228,14 @@
               <p class="text-red-800 dark:text-red-200 font-medium">
                 Terjadi kesalahan saat memuat profil pengguna
               </p>
+              <!-- FIX #1: Retry langsung panggil authStore.fetchProfile(),
+                   bukan fetchUserData() wrapper yang tidak perlu lagi -->
               <UButton
                 color="error"
                 variant="ghost"
                 size="sm"
                 class="mt-2"
-                @click="fetchUserData"
+                @click="authStore.fetchProfile()"
               >
                 Coba lagi
               </UButton>
@@ -193,12 +244,42 @@
         </div>
       </div>
 
+      <!-- Main content -->
       <div v-else-if="userData" class="max-w-4xl mx-auto">
+
+        <!-- Notice: Profile dari metadata saja (row DB belum ada / gagal sync) -->
         <div
-          class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/50 border border-gray-100 dark:border-gray-800 overflow-hidden transition-all duration-200 mb-6"
+          v-if="isProfileFromMetadataOnly"
+          class="mb-4 flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl"
+        >
+          <UIcon name="i-lucide-info" class="w-5 h-5 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-amber-800 dark:text-amber-200">
+              Data profil belum tersimpan ke database
+            </p>
+            <p class="text-xs text-amber-600 dark:text-amber-300 mt-0.5">
+              Informasi yang ditampilkan berasal dari akun Google Anda. Klik "Edit Profil Pribadi" untuk menyimpan data ke profil JuruTani.
+            </p>
+          </div>
+          <UButton
+            size="xs"
+            color="warning"
+            variant="soft"
+            icon="i-lucide-refresh-cw"
+            :loading="loading"
+            @click="authStore.fetchProfile()"
+          >
+            Sinkronkan
+          </UButton>
+        </div>
+
+        <!-- Profile header card -->
+
+        <div
+          class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/50 border border-gray-100 dark:border-gray-800 overflow-hidden mb-6"
         >
           <div
-            class="bg-linear-to-r from-green-600 to-emerald-600 dark:from-green-700 dark:to-emerald-700 px-6 py-8 transition-all duration-200"
+            class="bg-linear-to-r from-green-600 to-emerald-600 dark:from-green-700 dark:to-emerald-700 px-6 py-8"
           >
             <div class="flex flex-col md:flex-row items-center">
               <div class="relative mb-4 md:mb-0 md:mr-6">
@@ -212,13 +293,22 @@
                     @error="handleImageError"
                   />
                 </div>
-                <div
-                  class="absolute -bottom-2 -right-2 bg-white dark:bg-gray-800 rounded-full px-3 py-1 shadow-md dark:shadow-black/50 transition-all duration-200"
+                <!-- Tombol edit avatar -->
+                <button
+                  type="button"
+                  class="absolute bottom-0 right-0 bg-white dark:bg-gray-800 rounded-full p-2 shadow-md dark:shadow-black/50 border-2 border-green-500 hover:bg-green-50 dark:hover:bg-gray-700 transition-colors duration-200 group"
+                  title="Ganti foto profil"
+                  @click="showAvatarModal = true"
                 >
-                  <span
-                    class="text-xs font-semibold text-green-600 dark:text-green-400"
-                  >
-                    {{ authStore.roleLabel }}
+                  <UIcon name="i-lucide-camera" class="w-4 h-4 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform duration-200" />
+                </button>
+                <!-- Role badge -->
+                <div
+                  class="absolute -bottom-2 -right-2 bg-white dark:bg-gray-800 rounded-full px-3 py-1 shadow-md dark:shadow-black/50"
+                  :class="{ 'border border-red-400': isAdmin }"
+                >
+                  <span class="text-xs font-semibold text-green-600 dark:text-green-400">
+                    {{ isAdmin ? '⭐ Admin' : authStore.roleLabel }}
                   </span>
                 </div>
               </div>
@@ -233,10 +323,7 @@
                 <p class="text-green-50 dark:text-green-100">
                   {{ userData.email }}
                 </p>
-                <p
-                  v-if="userData.phone"
-                  class="text-green-50 dark:text-green-100"
-                >
+                <p v-if="userData.phone" class="text-green-50 dark:text-green-100">
                   📱 {{ userData.phone }}
                 </p>
               </div>
@@ -244,8 +331,9 @@
           </div>
         </div>
 
+        <!-- Tabs & content card -->
         <div
-          class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/50 border border-gray-100 dark:border-gray-800 overflow-hidden transition-all duration-200"
+          class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/50 border border-gray-100 dark:border-gray-800 overflow-hidden"
         >
           <div class="p-6">
             <UTabs
@@ -257,10 +345,11 @@
               class="w-full mb-6"
             />
 
+            <!-- Personal tab -->
             <div v-if="activeTab === 'personal'" class="py-4">
               <div
                 v-if="userData.bio"
-                class="mb-6 p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-100 dark:border-green-800 transition-colors duration-200"
+                class="mb-6 p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-100 dark:border-green-800"
               >
                 <h3
                   class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center"
@@ -276,58 +365,31 @@
                 </p>
               </div>
 
-              <div
-                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6"
-              >
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                <!-- Informasi Pribadi -->
                 <div class="space-y-4">
                   <h3
-                    class="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b border-green-200 dark:border-green-800 pb-2 transition-colors duration-200"
+                    class="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b border-green-200 dark:border-green-800 pb-2"
                   >
                     Informasi Pribadi
                   </h3>
-
                   <div class="space-y-3">
                     <div>
-                      <p
-                        class="text-sm font-medium text-gray-500 dark:text-gray-400"
-                      >
-                        Nama Lengkap
-                      </p>
-                      <p class="text-gray-800 dark:text-gray-200">
-                        {{ userData.full_name || '-' }}
-                      </p>
+                      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Nama Lengkap</p>
+                      <p class="text-gray-800 dark:text-gray-200">{{ userData.full_name || '-' }}</p>
                     </div>
-
                     <div>
-                      <p
-                        class="text-sm font-medium text-gray-500 dark:text-gray-400"
-                      >
-                        Username
-                      </p>
-                      <p class="text-gray-800 dark:text-gray-200">
-                        {{ userData.username || '-' }}
-                      </p>
+                      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Username</p>
+                      <p class="text-gray-800 dark:text-gray-200">{{ userData.username || '-' }}</p>
                     </div>
-
                     <div>
-                      <p
-                        class="text-sm font-medium text-gray-500 dark:text-gray-400"
-                      >
-                        Tanggal Lahir
-                      </p>
-                      <p class="text-gray-800 dark:text-gray-200">
-                        {{ formatDate(userData.birth_date) }}
-                      </p>
+                      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Tanggal Lahir</p>
+                      <p class="text-gray-800 dark:text-gray-200">{{ formatDate(userData.birth_date) }}</p>
                     </div>
-
                     <div>
-                      <p
-                        class="text-sm font-medium text-gray-500 dark:text-gray-400"
-                      >
-                        Role
-                      </p>
+                      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Role</p>
                       <span
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 transition-colors duration-200"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
                       >
                         {{ authStore.roleLabel }}
                       </span>
@@ -335,80 +397,53 @@
                   </div>
                 </div>
 
+                <!-- Kontak -->
                 <div class="space-y-4">
                   <h3
-                    class="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b border-green-200 dark:border-green-800 pb-2 transition-colors duration-200"
+                    class="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b border-green-200 dark:border-green-800 pb-2"
                   >
                     Kontak
                   </h3>
-
                   <div class="space-y-3">
                     <div>
-                      <p
-                        class="text-sm font-medium text-gray-500 dark:text-gray-400"
-                      >
-                        Email
-                      </p>
-                      <p
-                        class="text-gray-800 dark:text-gray-200 wrap-break-word"
-                      >
-                        {{ userData.email }}
-                      </p>
+                      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Email</p>
+                      <p class="text-gray-800 dark:text-gray-200 break-all">{{ userData.email }}</p>
                     </div>
-
                     <div>
-                      <p
-                        class="text-sm font-medium text-gray-500 dark:text-gray-400"
-                      >
-                        Nomor Telepon
-                      </p>
-                      <p class="text-gray-800 dark:text-gray-200">
-                        {{ userData.phone || '-' }}
-                      </p>
+                      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Nomor Telepon</p>
+                      <p class="text-gray-800 dark:text-gray-200">{{ userData.phone || '-' }}</p>
                     </div>
-
                     <div>
-                      <p
-                        class="text-sm font-medium text-gray-500 dark:text-gray-400"
-                      >
-                        Website
-                      </p>
+                      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Website</p>
                       <div v-if="userData.website">
                         <NuxtLink
                           v-if="isValidUrl(userData.website)"
                           :to="userData.website"
                           target="_blank"
                           rel="noopener noreferrer"
-                          class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 hover:underline wrap-break-word inline-flex items-center transition-colors duration-200"
+                          class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 hover:underline break-all inline-flex items-center"
                         >
                           {{ userData.website }}
-                          <UIcon
-                            name="i-lucide-external-link"
-                            class="w-4 h-4 ml-1"
-                          />
+                          <UIcon name="i-lucide-external-link" class="w-4 h-4 ml-1 shrink-0" />
                         </NuxtLink>
-                        <span
-                          v-else
-                          class="text-gray-800 dark:text-gray-200 wrap-break-word"
-                          >{{ userData.website }}</span
-                        >
+                        <span v-else class="text-gray-800 dark:text-gray-200 break-all">
+                          {{ userData.website }}
+                        </span>
                       </div>
                       <p v-else class="text-gray-800 dark:text-gray-200">-</p>
                     </div>
                   </div>
                 </div>
 
+                <!-- Alamat -->
                 <div class="space-y-4">
                   <h3
-                    class="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b border-green-200 dark:border-green-800 pb-2 transition-colors duration-200"
+                    class="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b border-green-200 dark:border-green-800 pb-2"
                   >
                     Alamat
                   </h3>
-
                   <div>
-                    <p
-                      class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1"
-                    >
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                       Alamat Lengkap
                     </p>
                     <p class="text-gray-800 dark:text-gray-200 leading-relaxed">
@@ -430,6 +465,11 @@
               </div>
             </div>
 
+            <!-- Professional section — hanya tampil jika pakar/penyuluh -->
+            <!-- FIX #7: Section ini ada di luar UTabs (bukan tab ke-2),
+                 tapi sebelumnya showProfessionalTab & tabs computed tidak nyambung.
+                 Sekarang: tetap sebagai section terpisah di bawah tab personal,
+                 dengan guard showProfessionalTab yang benar. -->
             <div
               v-if="showProfessionalTab"
               class="mt-8 border-t border-gray-100 dark:border-gray-800 pt-8"
@@ -439,9 +479,7 @@
                   class="text-xl font-semibold text-gray-900 dark:text-white flex items-center"
                 >
                   <UIcon
-                    :name="
-                      isPakar ? 'i-lucide-lightbulb' : 'i-lucide-user-check'
-                    "
+                    :name="isPakar ? 'i-lucide-lightbulb' : 'i-lucide-user-check'"
                     class="w-6 h-6 mr-2 text-green-600 dark:text-green-400"
                   />
                   Data Profesional {{ isPakar ? 'Pakar' : 'Penyuluh' }}
@@ -457,31 +495,43 @@
                 </UButton>
               </div>
 
-              <div
+              <UiLoading
                 v-if="professionalPending"
-                class="text-gray-500 dark:text-gray-400 text-sm py-4"
-              >
-                Memuat data profesional...
-              </div>
+                message="Memuat data profesional..."
+                height="h-24"
+              />
+
+              <UiError
+                v-else-if="professionalError"
+                :message="professionalError"
+                @retry="fetchProfessionalData"
+              />
+
+              <UiNotFound
+                v-else-if="professionalData && !professionalData.data"
+                message="Data profesional belum tersedia"
+                action-text="Lengkapi Data Profesional"
+                @action="openEditProfessionalModal"
+              />
 
               <div
-                v-else-if="professionalData && professionalData.data"
+                v-else-if="professionalData?.data"
                 class="space-y-4"
               >
                 <div
-                  class="p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 transition-colors"
+                  class="p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800"
                 >
+                  <!-- FIX #4: Akses field tanpa 'as any' karena professionalData
+                       sudah narrowed — pakai v-if pada type untuk discriminate -->
                   <template v-if="professionalData.type === 'pakar'">
                     <div class="mb-4">
-                      <p
-                        class="text-sm font-medium text-gray-500 dark:text-gray-400"
-                      >
+                      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
                         Kategori Ahli
                       </p>
                       <span
                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 mt-1"
                       >
-                        {{ (professionalData.data as any).category || '-' }}
+                        {{ professionalData.data.category || '-' }}
                       </span>
                     </div>
                   </template>
@@ -489,35 +539,30 @@
                   <template v-if="professionalData.type === 'penyuluh'">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div>
-                        <p
-                          class="text-sm font-medium text-gray-500 dark:text-gray-400"
-                        >
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
                           Wilayah Provinsi
                         </p>
                         <p class="text-gray-800 dark:text-gray-200 mt-1">
-                          {{ (professionalData.data as any).provinces || '-' }}
+                          {{ professionalData.data.provinces || '-' }}
                         </p>
                       </div>
                       <div>
-                        <p
-                          class="text-sm font-medium text-gray-500 dark:text-gray-400"
-                        >
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
                           Kabupaten/Kota
                         </p>
                         <p class="text-gray-800 dark:text-gray-200 mt-1">
-                          {{ (professionalData.data as any).district || '-' }}
+                          {{ professionalData.data.district || '-' }}
                         </p>
                       </div>
                     </div>
                   </template>
 
+                  <!-- FIX #4: .note diakses via type guard bukan langsung -->
                   <div
-                    v-if="professionalData.data.note"
+                    v-if="'note' in professionalData.data && professionalData.data.note"
                     class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800"
                   >
-                    <p
-                      class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2"
-                    >
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
                       Catatan/Ringkasan Profil
                     </p>
                     <p
@@ -528,39 +573,13 @@
                   </div>
                 </div>
               </div>
-
-              <div
-                v-else
-                class="p-6 bg-green-50/50 dark:bg-green-900/10 rounded-xl border border-green-100 dark:border-green-800/30 text-center"
-              >
-                <UIcon
-                  :name="isPakar ? 'i-lucide-award' : 'i-lucide-map-pin'"
-                  class="w-12 h-12 text-green-400 dark:text-green-600/50 mx-auto mb-3"
-                />
-                <p class="text-gray-600 dark:text-gray-400 text-sm">
-                  Anda memiliki akses sebagai
-                  <span
-                    class="font-semibold text-green-700 dark:text-green-400"
-                    >{{ authStore.roleLabel }}</span
-                  >. Pastikan kelengkapan data profesional Anda terisi dengan
-                  benar.
-                </p>
-                <UButton
-                  class="mt-4"
-                  color="success"
-                  variant="outline"
-                  size="sm"
-                  @click="openEditProfessionalModal"
-                >
-                  Kelola Data Profesional Saya
-                </UButton>
-              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Modal: Edit Profil Pribadi -->
     <UModal
       v-model:open="showEditPersonalModal"
       title="Edit Profil Pribadi"
@@ -576,6 +595,7 @@
       </template>
     </UModal>
 
+    <!-- Modal: Edit Data Profesional -->
     <UModal
       v-model:open="showEditProfessionalModal"
       title="Edit Data Profesional"
@@ -596,36 +616,49 @@
         </div>
       </template>
     </UModal>
+
+    <!-- Modal: Ganti Foto Profil -->
+    <UModal
+      v-model:open="showAvatarModal"
+      title="Ganti Foto Profil"
+      description="Pilih gambar baru untuk foto profil Anda."
+    >
+      <template #body>
+        <FeaturesProfileAvatarUpload
+          v-if="showAvatarModal"
+          @updated="handleAvatarUpdate"
+          @cancel="showAvatarModal = false"
+        />
+      </template>
+    </UModal>
   </div>
 </template>
 
 <style scoped>
-  /* Additional custom styles for JuruTani theme */
-  .container {
-    max-width: 1200px;
-  }
+.container {
+  max-width: 1200px;
+}
 
-  /* Smooth transitions */
-  * {
-    transition: all 0.2s ease-in-out;
-  }
+/* FIX #6: Hapus '* { transition: all }' — sangat buruk untuk performa karena
+   memaksa browser menghitung transisi untuk SEMUA properti di SEMUA elemen,
+   termasuk layout properties seperti width/height yang mahal.
+   Transisi sudah ditangani per-elemen via Tailwind class (transition-colors, dll). */
 
-  /* Custom scrollbar for better UX */
-  ::-webkit-scrollbar {
-    width: 6px;
-  }
+::-webkit-scrollbar {
+  width: 6px;
+}
 
-  ::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-  }
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
 
-  ::-webkit-scrollbar-thumb {
-    background: #16a34a;
-    border-radius: 3px;
-  }
+::-webkit-scrollbar-thumb {
+  background: #16a34a;
+  border-radius: 3px;
+}
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: #15803d;
-  }
+::-webkit-scrollbar-thumb:hover {
+  background: #15803d;
+}
 </style>

@@ -82,9 +82,20 @@
           >
             Sponsored by:
           </p>
+          <!-- menampilkan 3 logo dalam folder logo sebagai sponsor -->
           <div class="flex justify-center">
             <NuxtImg
-              src="/logo/sponsor.png"
+              src="/logo/kementan.webp"
+              alt="Sponsor Logo"
+              class="h-12 md:h-16 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity duration-200 mx-auto"
+            />
+            <NuxtImg
+              src="/logo/BPPSDMP.png"
+              alt="Sponsor Logo"
+              class="h-12 md:h-16 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity duration-200 mx-auto"
+            />
+            <NuxtImg
+              src="/logo/polbangtanyoma.webp"
               alt="Sponsor Logo"
               class="h-12 md:h-16 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity duration-200 mx-auto"
             />

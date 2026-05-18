@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import { z } from 'zod'
   import type { FormSubmitEvent } from '@nuxt/ui'
-  import { toastStore } from '~/composables/useJuruTaniToast'
 
   const authStore = useAuthStore()
   const supabase = useSupabaseClient()
+  const toast = useJuruTaniToast()
 
   // SEO Meta
   useSeoMeta({
@@ -63,15 +63,15 @@
         if (error.message.includes('rate_limit')) errorMessage = 'Terlalu banyak percobaan. Coba lagi dalam beberapa menit.'
         else if (error.message.includes('email_address_invalid')) errorMessage = 'Format email tidak valid'
         else if (error.message.includes('email_address_taken')) errorMessage = 'Email sudah digunakan oleh akun lain'
-        toastStore.error(errorMessage)
+        toast.error(errorMessage)
       } else {
         successMessage.value = 'Link konfirmasi berhasil dikirim ke email baru Anda. Silakan cek kotak masuk dan klik link konfirmasi.'
-        toastStore.success('Email berhasil diubah! Cek email baru untuk konfirmasi.')
+        toast.success('Email berhasil diubah! Cek email baru untuk konfirmasi.')
         emailState.newEmail = ''
         emailState.confirmEmail = ''
       }
     } catch (error) {
-      toastStore.error('Terjadi kesalahan sistem. Silakan coba lagi.')
+      toast.error('Terjadi kesalahan sistem. Silakan coba lagi.')
     } finally {
       isLoadingChangeEmail.value = false
     }
@@ -89,14 +89,14 @@
         let errorMessage = 'Gagal mengirim link reset password'
         if (error && error.includes('rate_limit')) errorMessage = 'Terlalu banyak percobaan. Coba lagi dalam beberapa menit.'
         else if (error && error.includes('user_not_found')) errorMessage = 'Email tidak terdaftar di sistem'
-        toastStore.error(errorMessage)
+        toast.error(errorMessage)
       } else {
         successMessage.value = 'Link reset password berhasil dikirim ke email Anda. Silakan cek kotak masuk.'
-        toastStore.success('Link reset password berhasil dikirim!')
+        toast.success('Link reset password berhasil dikirim!')
         resetState.resetEmail = ''
       }
     } catch (error: any) {
-      toastStore.error('Terjadi kesalahan sistem. Silakan coba lagi.')
+      toast.error('Terjadi kesalahan sistem. Silakan coba lagi.')
     } finally {
       isLoadingResetPassword.value = false
     }

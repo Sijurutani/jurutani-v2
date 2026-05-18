@@ -1,52 +1,21 @@
 <script setup lang="ts">
-  import type { Database } from '~/types/database.types'
+  import type { HomeBanner, HomeProduct } from '~/composables/useHomeData'
   import { getMarketPublicUrl } from '~/utils/storage'
   import { useReveal } from '~/composables/useReveal'
 
   useReveal()
 
-  type ProductMarket = Database['public']['Tables']['product_markets']['Row']
+  type ProductMarket = HomeProduct
 
-  interface Banner {
-    id: string
-    image_url: string
-    updated_at: string
-  }
+  const props = defineProps<{
+    banners: HomeBanner[]
+    initialProducts: ProductMarket[]
+  }>()
 
+  // Masih butuh supabase untuk banner storage URL saja
   const supabase = useSupabaseClient()
 
-  // ── Categories ─────────────────────────────────────────────────────────────
-  const { data: categoriesData } = await useAsyncData(
-    'market-categories',
-    async () => {
-      const { data } = await supabase
-        .from('category_markets')
-        .select('name')
-        .order('name', { ascending: true })
-      return data || []
-    },
-  )
-
-  const categories = computed(() =>
-    (categoriesData.value || []).map((c) => ({ name: c.name, value: c.name })),
-  )
-
-  const selectedCategory = ref('')
-
-  // ── Banners via SSR (bukan onMounted = tidak ada client waterfall) ─────────────
-  const { data: bannersData } = await useAsyncData(
-    'home-banners',
-    async () => {
-      const { data } = await supabase
-        .from('banner')
-        .select('id, image_url, updated_at')
-        .order('updated_at', { ascending: false })
-        .limit(10)
-      return (data || []) as Banner[]
-    },
-    { maxAge: 300, dedupe: 'defer' },
-  )
-  const banners = computed(() => bannersData.value || [])
+  const banners = computed(() => props.banners)
   const bannerIndex = ref(0)
   const bannerTransitioning = ref(false)
   const bannerProgressRef = ref<HTMLElement | null>(null)
@@ -139,66 +108,12 @@
     setTimeout(() => startBannerAutoplay(), 200)
   }
 
-  // ── Category Filter Carousel (page-based, no ugly scrollbar) ───────────────
-  const catTrackRef = ref<HTMLElement | null>(null)
-  const catDotIndex = ref(0)
-  const CAT_PER_PAGE = 4 // pills shown per page snap
 
-  const catAllItems = computed(() => [
-    { name: 'Semua', value: '' },
-    ...categories.value,
-  ])
-
-  const catDotCount = computed(() =>
-    Math.max(1, Math.ceil(catAllItems.value.length / CAT_PER_PAGE)),
-  )
-
-  const handleCatScroll = () => {
-    if (!catTrackRef.value) return
-    const step = catTrackRef.value.clientWidth
-    catDotIndex.value = Math.round(catTrackRef.value.scrollLeft / step)
-  }
-
-  const scrollCatTo = (i: number) => {
-    if (!catTrackRef.value) return
-    catTrackRef.value.scrollTo({
-      left: catTrackRef.value.clientWidth * i,
-      behavior: 'smooth',
-    })
-    catDotIndex.value = i
-  }
-
-  // ── Products via SSR + caching 2 menit ───────────────────────────────────
-  const products = ref<ProductMarket[]>([])
+  const products = ref<ProductMarket[]>(props.initialProducts)
   const loadingProducts = ref(false)
   const productTrackRef = ref<HTMLElement | null>(null)
   const productPageIndex = ref(0)
   const productPerPage = ref(2)
-
-  // Fetch awal via SSR (menghilangkan client-side waterfall)
-  const { data: initialProducts } = await useAsyncData(
-    `home-products-${selectedCategory.value || 'all'}`,
-    async () => {
-      let q = supabase
-        .from('product_markets')
-        .select(
-          'id,name,slug,category,price,price_range,price_unit,thumbnail_url,images,excerpt',
-        )
-        .is('deleted_at', null)
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false })
-        .limit(8)
-      if (selectedCategory.value) q = q.eq('category', selectedCategory.value)
-      const { data } = await q
-      return (data || []) as ProductMarket[]
-    },
-    { maxAge: 120, dedupe: 'defer' },
-  )
-
-  // Set produk awal dari SSR
-  if (initialProducts.value) {
-    products.value = initialProducts.value
-  }
 
   const updateProductPerPage = () => {
     if (!productTrackRef.value || !products.value.length) return
@@ -212,33 +127,6 @@
   const productDotCount = computed(() =>
     Math.max(1, Math.ceil(products.value.length / productPerPage.value)),
   )
-
-  const fetchProducts = async () => {
-    loadingProducts.value = true
-    try {
-      let q = supabase
-        .from('product_markets')
-        .select(
-          'id,name,slug,category,price,price_range,price_unit,thumbnail_url,images,excerpt',
-        )
-        .is('deleted_at', null)
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false })
-        .limit(8)
-      if (selectedCategory.value) q = q.eq('category', selectedCategory.value)
-      const { data } = await q
-      products.value = (data || []) as ProductMarket[]
-      productPageIndex.value = 0
-      nextTick(() => {
-        productTrackRef.value?.scrollTo({ left: 0 })
-        updateProductPerPage()
-      })
-    } catch {
-      products.value = []
-    } finally {
-      loadingProducts.value = false
-    }
-  }
 
   const handleProductScroll = () => {
     if (!productTrackRef.value) return
@@ -271,7 +159,7 @@
     let thumbPath = p.thumbnail_url || ''
     if (!thumbPath) {
       const imgs = parseImages(p.images)
-      if (imgs.length > 0) thumbPath = imgs[0]
+      if (imgs.length > 0) thumbPath = imgs[0] ?? ''
     }
     if (!thumbPath) return '/product.webp'
     return getMarketPublicUrl(thumbPath) || '/product.webp'
@@ -287,10 +175,11 @@
     }).format(p.price)
   }
 
-  watch(selectedCategory, fetchProducts)
+  watch(() => props.initialProducts, (val) => {
+    if (val) products.value = val
+  })
 
   onMounted(async () => {
-    // Banner sudah tersedia dari SSR via bannersData, tidak perlu fetch lagi
     if (banners.value.length > 1) nextTick(() => startBannerAutoplay())
     // Set perPage setelah DOM siap
     nextTick(() => updateProductPerPage())
@@ -308,15 +197,11 @@
     <!-- ── Section Header ── -->
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
       <div>
-        <!-- Badge -->
-        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100/50 dark:bg-green-900/20 border border-green-500/20 mb-3 shadow-sm">
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-          </span>
-          <span class="text-[10px] font-extrabold uppercase tracking-widest text-green-700 dark:text-green-400">
-            JuruTani Mall
-          </span>
+        <!-- Badge glass sweep -->
+        <div class="section-badge mb-3">
+          <span class="section-badge__dot" />
+          <span class="section-badge__text">JuruTani Mall</span>
+          <span class="section-badge__sweep" aria-hidden="true" />
         </div>
 
         <h2 class="text-3xl md:text-4xl font-black text-gray-900 dark:text-gray-50 tracking-tight">
@@ -405,40 +290,6 @@
             />
           </button>
         </div>
-      </div>
-    </div>
-
-    <!-- ── Category Filter Carousel ── -->
-    <div class="flex flex-col gap-1.5">
-      <div
-        ref="catTrackRef"
-        class="flex gap-2 overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide pb-0.5"
-        @scroll.passive="handleCatScroll"
-      >
-        <button
-          v-for="cat in catAllItems"
-          :key="cat.value"
-          class="flex-none snap-start px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-300 cursor-pointer shadow-sm"
-          :class="
-            selectedCategory === cat.value
-              ? 'bg-gradient-to-r from-green-500 to-emerald-600 border-transparent text-white shadow-green-500/30'
-              : 'bg-white/50 dark:bg-gray-800/50 backdrop-blur border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-green-400 hover:text-green-600 dark:hover:text-green-400'
-          "
-          @click="selectedCategory = cat.value"
-        >
-          {{ cat.name }}
-        </button>
-      </div>
-
-      <div v-if="catDotCount > 1" class="flex items-center justify-center gap-1.5 mt-2">
-        <button
-          v-for="(_, i) in catDotCount"
-          :key="i"
-          :aria-label="`Halaman kategori ${i + 1}`"
-          class="h-1.5 rounded-full border-none cursor-pointer transition-all duration-300"
-          :class="i === catDotIndex ? 'w-5 bg-green-500' : 'w-1.5 bg-gray-400/45'"
-          @click="scrollCatTo(i)"
-        />
       </div>
     </div>
 
@@ -562,6 +413,42 @@
 /* Scrollbar hide (belum semua browser support via Tailwind) */
 .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* ── Section Badge ── */
+.section-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.85rem;
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: 9999px;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+.section-badge__dot {
+  display: block; width: 0.4rem; height: 0.4rem;
+  border-radius: 50%; background: #4ade80; flex-shrink: 0;
+  animation: badge-dot-pulse 2s ease-in-out infinite;
+}
+.section-badge__text {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: #16a34a;
+}
+:root.dark .section-badge__text { color: #4ade80; }
+.section-badge__sweep {
+  position: absolute; top: 0; left: 0; width: 55%; height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%);
+  pointer-events: none;
+  animation: badge-sweep 3.5s ease-in-out infinite;
+}
+@keyframes badge-dot-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes badge-sweep {
+  0% { transform: translateX(-200%); opacity: 0; }
+  10% { opacity: 1; } 90% { opacity: 1; }
+  100% { transform: translateX(280%); opacity: 0; }
+}
 </style>
 
 

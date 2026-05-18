@@ -2,7 +2,7 @@
   import { z } from 'zod'
   import type { FormSubmitEvent } from '#ui/types'
   import type { JSONContent } from '@tiptap/vue-3'
-  import { toastStore } from '~/composables/useJuruTaniToast'
+  import { useJuruTaniToast } from '~/composables/useJuruTaniToast'
   import {
     uploadNewsFile,
     formatFileSize,
@@ -27,6 +27,7 @@
 
   const supabase = useSupabaseClient()
   const router = useRouter()
+  const toast = useJuruTaniToast()
 
   // Konstanta lokal
   const NEWS_UPDATED_CONSTANTS = {
@@ -50,11 +51,11 @@
     maxSize = NEWS_UPDATED_CONSTANTS.MAX_IMAGE_SIZE,
   ) {
     if (!file.type.startsWith('image/')) {
-      toastStore.error(`File ${file.name} bukan gambar`)
+      toast.error(`File ${file.name} bukan gambar`)
       return false
     }
     if (file.size > maxSize) {
-      toastStore.error(
+      toast.error(
         `Ukuran ${file.name} terlalu besar (maks ${Math.round(maxSize / 1024 / 1024)}MB)`,
       )
       return false
@@ -71,13 +72,13 @@
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     ]
     if (!validateFileType(file, allowedTypes)) {
-      toastStore.error(
+      toast.error(
         `File ${file.name} bukan format yang didukung (PDF, DOC, DOCX, XLS, XLSX)`,
       )
       return false
     }
     if (file.size > NEWS_UPDATED_CONSTANTS.MAX_ATTACHMENT_SIZE) {
-      toastStore.error(`Ukuran ${file.name} terlalu besar (maks 10MB)`)
+      toast.error(`Ukuran ${file.name} terlalu besar (maks 10MB)`)
       return false
     }
     return true
@@ -235,7 +236,7 @@
       coverImagePreview.value = await createImagePreview(newFile)
     } catch (error) {
       console.error('Error creating preview:', error)
-      toastStore.error('Gagal membuat preview gambar')
+      toast.error('Gagal membuat preview gambar')
     }
   })
 
@@ -252,7 +253,7 @@
         state.galleryFiles!.length + validFiles.length >=
         NEWS_UPDATED_CONSTANTS.MAX_GALLERY_IMAGES
       ) {
-        toastStore.error(
+        toast.error(
           `Maksimal ${NEWS_UPDATED_CONSTANTS.MAX_GALLERY_IMAGES} gambar galeri`,
         )
         break
@@ -289,7 +290,7 @@
         state.attachmentFiles!.length + validFiles.length >=
         NEWS_UPDATED_CONSTANTS.MAX_ATTACHMENTS
       ) {
-        toastStore.error(
+        toast.error(
           `Maksimal ${NEWS_UPDATED_CONSTANTS.MAX_ATTACHMENTS} lampiran`,
         )
         break
@@ -328,7 +329,7 @@
     try {
       // Validate required fields
       if (!event.data.title || !event.data.category) {
-        toastStore.error('Judul dan kategori wajib diisi')
+        toast.error('Judul dan kategori wajib diisi')
         loading.value = false
         return
       }
@@ -386,11 +387,11 @@
         throw insertError
       }
 
-      toastStore.success('Berita berhasil dibuat! Menunggu persetujuan admin.')
+      toast.success('Berita berhasil dibuat! Menunggu persetujuan admin.')
       router.push(`/update/${slug}`)
     } catch (error) {
       console.error('Error creating news:', error)
-      toastStore.error('Gagal membuat berita. Silakan coba lagi.')
+      toast.error('Gagal membuat berita. Silakan coba lagi.')
     } finally {
       loading.value = false
     }

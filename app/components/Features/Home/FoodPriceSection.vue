@@ -1,20 +1,14 @@
 <script setup lang="ts">
   import { formatCurrency } from '~/utils/currency'
   import { getFoodPublicUrl } from '~/utils/storage'
-  import type { Database } from '~/types/database.types'
+  import type { HomeFoodRow } from '~/composables/useHomeData'
 
-  const supabase = useSupabaseClient<Database>()
+  type FoodRow = HomeFoodRow
 
-  type FoodRow = {
-    id: string
-    name: string
-    category: string | null
-    satuan: string | null
-    slug: string | null
-    image_url: string | null
-    latest_price: number
-    latest_price_date: string
-  }
+  const props = defineProps<{
+    items: FoodRow[]
+    pending: boolean
+  }>()
 
   const categoryIcon = (val: string) =>
     ({ hortikultura: 'i-lucide-leaf', perkebunan: 'i-lucide-tree-deciduous', peternakan: 'i-lucide-beef' })[val] ||
@@ -31,50 +25,19 @@
     } catch { return '' }
   }
 
-  const { data: items, pending } = await useAsyncData<FoodRow[]>(
-    'fp-home-latest',
-    async () => {
-      const { data, error } = await supabase
-        .from('food_prices')
-        .select('price, date, foods!inner(id, name, category, satuan, slug, image_url)', { count: 'exact' })
-        .is('deleted_at', null)
-        .is('foods.deleted_at', null)
-        .order('date', { ascending: false })
-        .limit(50)
-
-      if (error) throw error
-
-      const seen = new Set<string>()
-      const deduped: FoodRow[] = []
-      for (const row of data || []) {
-        const food = row.foods as any
-        if (!food || seen.has(food.id) || !row.price || row.price <= 0) continue
-        seen.add(food.id)
-        deduped.push({
-          id: food.id, name: food.name, category: food.category,
-          satuan: food.satuan, slug: food.slug,
-          image_url: getFoodPublicUrl(food.image_url || null),
-          latest_price: row.price, latest_price_date: row.date,
-        })
-        if (deduped.length >= 12) break
-      }
-      return deduped
-    },
-  )
-
   const trackRef = ref<HTMLElement | null>(null)
   const dotIndex = ref(0)
   const perPage = ref(2)
 
   const updatePerPage = () => {
-    if (!trackRef.value || !(items.value as FoodRow[] | null)?.length) return
+    if (!trackRef.value || !props.items?.length) return
     const card = trackRef.value.children[0] as HTMLElement
     if (!card) return
     perPage.value = Math.max(1, Math.round(trackRef.value.clientWidth / card.offsetWidth))
   }
 
   const dotCount = computed(() =>
-    Math.max(1, Math.ceil(((items.value as FoodRow[] | null)?.length ?? 0) / perPage.value)),
+    Math.max(1, Math.ceil((props.items?.length ?? 0) / perPage.value)),
   )
 
   const handleScroll = () => {
@@ -88,7 +51,7 @@
     dotIndex.value = i
   }
 
-  const latestDate = computed(() => (items.value as FoodRow[] | null)?.[0]?.latest_price_date)
+  const latestDate = computed(() => props.items?.[0]?.latest_price_date)
 
   onMounted(() => {
     nextTick(() => updatePerPage())
@@ -102,15 +65,11 @@
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
       <div>
-        <!-- Badge -->
-        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100/50 dark:bg-green-900/20 border border-green-500/20 mb-3 shadow-sm">
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-          </span>
-          <span class="text-[10px] font-extrabold uppercase tracking-widest text-green-700 dark:text-green-400">
-            Market Update
-          </span>
+        <!-- Badge glass sweep -->
+        <div class="section-badge mb-3">
+          <span class="section-badge__dot" />
+          <span class="section-badge__text">Market Update</span>
+          <span class="section-badge__sweep" aria-hidden="true" />
         </div>
 
         <h2 class="text-3xl md:text-4xl font-black text-gray-900 dark:text-gray-50 tracking-tight">
@@ -132,7 +91,7 @@
     </div>
 
     <!-- Loading skeleton -->
-    <div v-if="pending" class="flex gap-3 overflow-hidden">
+    <div v-if="props.pending" class="flex gap-3 overflow-hidden">
       <div
         v-for="i in 4"
         :key="i"
@@ -141,14 +100,14 @@
     </div>
 
     <!-- Carousel -->
-    <template v-else-if="(items as FoodRow[] | null)?.length">
+    <template v-else-if="props.items?.length">
       <div
         ref="trackRef"
         class="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-hide"
         @scroll.passive="handleScroll"
       >
         <NuxtLink
-          v-for="item in (items as FoodRow[])"
+          v-for="item in props.items"
           :key="item.id"
           :to="`/food-prices/${item.slug || item.id}`"
           class="relative flex-none snap-start w-[calc(50%-6px)] sm:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)] rounded-sm overflow-hidden no-underline group cursor-pointer aspect-square"
@@ -232,4 +191,54 @@
 <style scoped>
 .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* ── Section Badge ── */
+.section-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.85rem;
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: 9999px;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+.section-badge__dot {
+  display: block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: #4ade80;
+  flex-shrink: 0;
+  animation: badge-dot-pulse 2s ease-in-out infinite;
+}
+.section-badge__text {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #16a34a;
+}
+:root.dark .section-badge__text { color: #4ade80; }
+.section-badge__sweep {
+  position: absolute;
+  top: 0; left: 0;
+  width: 55%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%);
+  pointer-events: none;
+  animation: badge-sweep 3.5s ease-in-out infinite;
+}
+@keyframes badge-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@keyframes badge-sweep {
+  0%   { transform: translateX(-200%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateX(280%); opacity: 0; }
+}
 </style>

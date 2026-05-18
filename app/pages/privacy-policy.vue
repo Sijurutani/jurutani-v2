@@ -11,17 +11,7 @@
 </script>
 
 <template>
-  <div
-    class="bg-gradient-to-br from-white/90 to-emerald-50/40 dark:from-neutral-900/90 dark:to-emerald-950/30 rounded-lg sm:rounded-2xl lg:rounded-[32px] shadow-sm border border-emerald-200/40 dark:border-emerald-700/30 p-4 sm:p-8 lg:p-12 overflow-hidden relative"
-  >
-    <!-- Decorative background elements -->
-    <div
-      class="absolute top-0 right-0 -mr-20 -mt-20 w-72 h-72 bg-gradient-to-br from-emerald-200/20 to-teal-200/10 dark:from-emerald-800/10 dark:to-teal-800/5 rounded-full blur-3xl opacity-40 pointer-events-none"
-    />
-    <div
-      class="absolute -bottom-32 -left-32 w-80 h-80 bg-gradient-to-tr from-emerald-100/15 to-transparent dark:from-emerald-900/10 rounded-full blur-3xl opacity-30 pointer-events-none"
-    />
-
+  <div class="rounded-lg sm:rounded-2xl lg:rounded-[32px] p-4 sm:p-8 lg:p-12 relative">
     <!-- Header -->
     <div
       class="border-b border-emerald-200/40 dark:border-emerald-700/30 pb-5 sm:pb-8 mb-6 sm:mb-10 relative"

@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { toastStore } from './useJuruTaniToast'
+import { useJuruTaniToast } from './useJuruTaniToast'
 export interface ShareOptions {
   title: string
   description?: string
@@ -15,6 +15,7 @@ export interface SharePlatform {
 }
 
 export function useSocialShare() {
+  const toast = useJuruTaniToast()
   const isSharing = ref(false)
 
   // Copy to clipboard — client only
@@ -50,11 +51,11 @@ export function useSocialShare() {
   const shareToInstagram = async (options: ShareOptions) => {
     const success = await copyToClipboard(options.url)
     if (success) {
-      toastStore.success(
+      toast.success(
         'Link disalin! Buka Instagram dan paste link di bio atau story Anda',
       )
     } else {
-      toastStore.error('Gagal menyalin link. Silakan salin link secara manual')
+      toast.error('Gagal menyalin link. Silakan salin link secara manual')
     }
   }
 
@@ -62,11 +63,11 @@ export function useSocialShare() {
   const shareToTikTok = async (options: ShareOptions) => {
     const success = await copyToClipboard(options.url)
     if (success) {
-      toastStore.success(
+      toast.success(
         'Link disalin! Buka TikTok dan paste link di bio atau video Anda',
       )
     } else {
-      toastStore.error('Gagal menyalin link. Silakan salin link secara manual')
+      toast.error('Gagal menyalin link. Silakan salin link secara manual')
     }
   }
 
@@ -74,9 +75,9 @@ export function useSocialShare() {
   const copyLink = async (options: ShareOptions) => {
     const success = await copyToClipboard(options.url)
     if (success) {
-      toastStore.success('Link berhasil disalin ke clipboard')
+      toast.success('Link berhasil disalin ke clipboard')
     } else {
-      toastStore.error('Gagal menyalin link. Silakan salin link secara manual')
+      toast.error('Gagal menyalin link. Silakan salin link secara manual')
     }
   }
 
@@ -122,7 +123,7 @@ export function useSocialShare() {
       await platform.action(options)
     } catch (err) {
       console.error('Share error:', err)
-      toastStore.error('Gagal membagikan konten. Silakan coba lagi')
+      toast.error('Gagal membagikan konten. Silakan coba lagi')
     } finally {
       isSharing.value = false
     }

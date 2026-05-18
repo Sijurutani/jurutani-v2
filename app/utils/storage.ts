@@ -361,6 +361,130 @@ export async function deleteCourseFile(urlOrPath: string): Promise<void> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Avatars Storage (bucket: avatars)
+//   [userId]/filename
+// ─────────────────────────────────────────────────────────────────────────────
+
+const BUCKET_AVATARS = 'avatars'
+
+/**
+ * Extract the storage path from a full Supabase avatar URL.
+ * Strips the bucket prefix and query string (e.g. `?t=...` timestamp token).
+ * Returns null if the URL does not belong to the avatars bucket.
+ */
+export function extractAvatarPath(urlOrPath: string): string | null {
+  if (!urlOrPath) return null
+  const storagePrefix = `/storage/v1/object/public/${BUCKET_AVATARS}/`
+  if (!urlOrPath.includes(storagePrefix)) return null
+  // Remove query string (e.g. ?t=1754534043476)
+  return urlOrPath.split(storagePrefix)[1]!.split('?')[0]!
+}
+
+/**
+ * Upload a user avatar to Supabase Storage (avatars bucket).
+ * Path format: [userId]/avatar_[timestamp]_[random].[ext]
+ * Returns the full public URL.
+ */
+export async function uploadAvatarFile(
+  userId: string,
+  file: File,
+): Promise<string> {
+  const supabase = useSupabaseClient<Database>()
+  const ext = file.name.split('.').pop() ?? 'bin'
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 11)
+  const path = `${userId}/avatar_${timestamp}_${random}.${ext}`
+
+  const { error } = await supabase.storage
+    .from(BUCKET_AVATARS)
+    .upload(path, file, { upsert: true, contentType: file.type })
+
+  if (error) throw new Error(error.message)
+
+  const { data } = supabase.storage.from(BUCKET_AVATARS).getPublicUrl(path)
+  return data.publicUrl
+}
+
+/**
+ * Get public URL for an avatar path.
+ * Accepts:
+ * - full URL (returned as-is)
+ * - storage path without bucket prefix ([userId]/filename)
+ */
+export function getAvatarPublicUrl(path: string | null): string | null {
+  if (!path) return null
+  if (path.startsWith('http')) return path
+  const supabase = useSupabaseClient<Database>()
+  const { data } = supabase.storage.from(BUCKET_AVATARS).getPublicUrl(path)
+  return data.publicUrl
+}
+
+/**
+ * Delete an avatar from Supabase Storage by its full public URL or storage path.
+ * Silently ignores errors (e.g. file already deleted).
+ */
+export async function deleteAvatarFile(urlOrPath: string): Promise<void> {
+  const supabase = useSupabaseClient<Database>()
+  const path = extractAvatarPath(urlOrPath) ?? urlOrPath
+  await supabase.storage.from(BUCKET_AVATARS).remove([path])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Chat Images Storage (bucket: chat-images)
+//   [conversationId]/filename
+// ─────────────────────────────────────────────────────────────────────────────
+
+const BUCKET_CHAT_IMAGES = 'chat-images'
+
+/**
+ * Upload a chat image to Supabase Storage (chat-images bucket).
+ * Path format: [conversationId]/[timestamp]_[random].[ext]
+ * Returns the full public URL.
+ */
+export async function uploadChatImageFile(
+  conversationId: string,
+  file: File,
+): Promise<string> {
+  const supabase = useSupabaseClient<Database>()
+  const ext = file.name.split('.').pop() ?? 'bin'
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 11)
+  const path = `${conversationId}/${timestamp}_${random}.${ext}`
+
+  const { error } = await supabase.storage
+    .from(BUCKET_CHAT_IMAGES)
+    .upload(path, file, { upsert: false, contentType: file.type })
+
+  if (error) throw new Error(error.message)
+
+  const { data } = supabase.storage.from(BUCKET_CHAT_IMAGES).getPublicUrl(path)
+  return data.publicUrl
+}
+
+/**
+ * Get public URL for a chat image path.
+ */
+export function getChatImagePublicUrl(path: string | null): string | null {
+  if (!path) return null
+  if (path.startsWith('http')) return path
+  const supabase = useSupabaseClient<Database>()
+  const { data } = supabase.storage.from(BUCKET_CHAT_IMAGES).getPublicUrl(path)
+  return data.publicUrl
+}
+
+/**
+ * Delete a chat image from Supabase Storage by its full public URL or storage path.
+ */
+export async function deleteChatImageFile(urlOrPath: string): Promise<void> {
+  const supabase = useSupabaseClient<Database>()
+  const storagePrefix = `/storage/v1/object/public/${BUCKET_CHAT_IMAGES}/`
+  const path = urlOrPath.includes(storagePrefix)
+    ? urlOrPath.split(storagePrefix)[1]!.split('?')[0]!
+    : urlOrPath
+  await supabase.storage.from(BUCKET_CHAT_IMAGES).remove([path])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Generic Storage Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 

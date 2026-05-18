@@ -1,13 +1,34 @@
 <script setup lang="ts">
+  import type { HomeExpert } from '~/composables/useHomeData'
 
+  // ── Props dari index.vue (data sudah di-fetch di root) ────────────────────
+  interface HeroItem {
+    id: string | number
+    image_url: string | null
+    caption?: string
+    title?: string
+    description?: string
+    button_text?: string
+    button_link?: string
+  }
+  interface HomeCounts {
+    profiles: number
+    instructors: number
+    experts: number
+  }
 
+  const props = defineProps<{
+    heroData: HeroItem[]
+    loading: boolean
+    error: any
+    counts: HomeCounts | null
+  }>()
+
+  const emit = defineEmits<{ refresh: [] }>()
+
+  // ── Image helpers (masih butuh supabase untuk URL storage) ────────────────
   const supabase = useSupabaseClient()
-  const { getHeroData, getHomeStats } = useHomeData()
 
-  const { data: heroData, pending: loading, error, refresh: fetchHeroData } = await getHeroData()
-  const { data: counts } = await getHomeStats()
-
-  // ── Image helpers ──────────────────────────────────────────────────────────
   const getRawImageUrl = (bucket: string, path: string): string => {
     try {
       const { data } = supabase.storage.from(bucket).getPublicUrl(path)
@@ -21,10 +42,10 @@
     return getRawImageUrl('hero-image', imageUrl) || null
   }
 
-  const carouselItems = computed(() => heroData.value || [])
+  const carouselItems = computed(() => props.heroData || [])
   const itemsCount = computed(() => carouselItems.value.length)
 
-  // ── Carousel (Auto Swipe via VueUse useIntervalFn) ────────────────────────
+  // ── Carousel ──────────────────────────────────────────────────────────────
   const currentSlide = ref(0)
   const isTransitioning = ref(false)
 
@@ -52,50 +73,20 @@
 
   let intervalId: ReturnType<typeof setInterval> | null = null
 
-  const pause = () => {
-    if (intervalId) {
-      clearInterval(intervalId)
-      intervalId = null
-    }
-  }
+  const pause = () => { if (intervalId) { clearInterval(intervalId); intervalId = null } }
+  const resume = () => { pause(); if (typeof window !== 'undefined') { intervalId = setInterval(nextSlide, 5000) } }
+  const resetAutoplay = () => { pause(); if (itemsCount.value > 1) resume() }
 
-  const resume = () => {
-    pause()
-    if (typeof window !== 'undefined') {
-      intervalId = setInterval(nextSlide, 5000)
-    }
-  }
-
-  const resetAutoplay = () => {
-    pause()
-    if (itemsCount.value > 1) resume()
-  }
-
-  watch(itemsCount, (val) => { 
-    if (val > 1) resetAutoplay() 
-    else pause() 
-  })
+  watch(itemsCount, (val) => { if (val > 1) resetAutoplay(); else pause() })
 
   let observer: IntersectionObserver | null = null
+  const stopStatsObserver = () => { if (observer) { observer.disconnect(); observer = null } }
 
-  const stopStatsObserver = () => {
-    if (observer) {
-      observer.disconnect()
-      observer = null
-    }
-  }
-
-  onMounted(() => { 
-    if (itemsCount.value > 1) resetAutoplay() 
-    
+  onMounted(() => {
+    if (itemsCount.value > 1) resetAutoplay()
     if (statsRef.value && typeof window !== 'undefined' && 'IntersectionObserver' in window) {
       observer = new IntersectionObserver(
-        ([{ isIntersecting }]) => {
-          if (isIntersecting) {
-            startStats()
-            stopStatsObserver()
-          }
-        },
+        ([{ isIntersecting }]) => { if (isIntersecting) { startStats(); stopStatsObserver() } },
         { threshold: 0.3 }
       )
       observer.observe(statsRef.value)
@@ -103,11 +94,8 @@
       startStats()
     }
   })
-  
-  onBeforeUnmount(() => {
-    pause()
-    stopStatsObserver()
-  })
+
+  onBeforeUnmount(() => { pause(); stopStatsObserver() })
 
   // ── Stats counter animation ────────────────────────────────────────────────
   const displayCounts = reactive({ profiles: 0, instructors: 0, experts: 0 })
@@ -126,14 +114,12 @@
   }
 
   const startStats = () => {
-    if (statsAnimated.value || !counts.value) return
+    if (statsAnimated.value || !props.counts) return
     statsAnimated.value = true
-    setTimeout(() => animateCounter('profiles', counts.value!.profiles), 100)
-    setTimeout(() => animateCounter('instructors', counts.value!.instructors), 200)
-    setTimeout(() => animateCounter('experts', counts.value!.experts), 300)
+    setTimeout(() => animateCounter('profiles', props.counts!.profiles), 100)
+    setTimeout(() => animateCounter('instructors', props.counts!.instructors), 200)
+    setTimeout(() => animateCounter('experts', props.counts!.experts), 300)
   }
-
-
 
   // ── Quick menus ────────────────────────────────────────────────────────────
   const quickMenus = [
@@ -150,8 +136,8 @@
   <section class="hero-section">
     <!-- ══ Carousel Background ══════════════════════════════════════════ -->
     <div class="hero-bg">
-      <div v-if="loading" class="hero-bg__skeleton" />
-      <div v-else-if="error" class="hero-bg__fallback" />
+      <div v-if="props.loading" class="hero-bg__skeleton" />
+      <div v-else-if="props.error" class="hero-bg__fallback" />
       <TransitionGroup v-else name="hero-fade" tag="div" class="hero-bg__slides">
         <div
           v-for="(item, index) in carouselItems"
@@ -187,6 +173,7 @@
 
     <!-- ══ Foreground Content ═══════════════════════════════════════════ -->
     <div class="hero-content">
+      <div class="hero-content-inner">
       <!-- LEFT: Text, Stats, Quick Access -->
       <div class="hero-left">
         <!-- Badge -->
@@ -198,7 +185,7 @@
 
         <!-- Heading -->
         <h1 class="hero-heading">
-          Pertanian modern
+          <span class="hero-heading__main">Pertanian <em class="hero-heading__highlight">modern</em></span>
           <span class="hero-heading__accent">untuk Indonesia</span>
         </h1>
 
@@ -254,10 +241,10 @@
       <!-- RIGHT: Carousel image & slide content (visible on desktop) -->
       <div class="hero-right">
         <!-- Error / Empty -->
-        <div v-if="!loading && (error || carouselItems.length === 0)" class="carousel-placeholder">
-          <div v-if="error" class="flex flex-col items-center gap-3">
+        <div v-if="!props.loading && (props.error || carouselItems.length === 0)" class="carousel-placeholder">
+          <div v-if="props.error" class="flex flex-col items-center gap-3">
             <UIcon name="i-lucide-triangle-alert" class="w-10 h-10 text-red-400" />
-            <UButton color="error" size="sm" @click="() => fetchHeroData()">Coba Lagi</UButton>
+            <UButton color="error" size="sm" @click="emit('refresh')">Coba Lagi</UButton>
           </div>
           <div v-else class="flex flex-col items-center gap-2">
             <UIcon name="i-lucide-image" class="w-10 h-10 text-white/30" />
@@ -311,11 +298,14 @@
           </div>
         </template>
       </div>
+      </div><!-- /hero-content-inner -->
     </div>
   </section>
 </template>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&display=swap');
+
 /* ══════ SECTION ══════════════════════════════════════════════════════════ */
 .hero-section {
   position: relative;
@@ -399,17 +389,39 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 2rem 1.5rem;
-  gap: 2rem;
+  padding: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .hero-content {
+    padding: 2rem;
+  }
 }
 
 @media (min-width: 1024px) {
   .hero-content {
+    padding: 3rem;
+  }
+}
+
+/* Container utama — mengikuti pola footer-container:
+   max-width 1280px + margin auto + padding horizontal */
+.hero-content-inner {
+  width: 100%;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .hero-content-inner {
     flex-direction: row;
     align-items: flex-end;
     justify-content: space-between;
-    padding: 5rem 6rem;
-    gap: 5rem;
+    gap: 4rem;
   }
 }
 
@@ -490,11 +502,55 @@
 
 /* Heading */
 .hero-heading {
-  font-size: 2.25rem;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 2.5rem;
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05em;
+}
+
+/* Baris 1: solid putih bold */
+.hero-heading__main {
+  display: block;
   color: #ffffff;
-  letter-spacing: -0.025em;
+  font-weight: 800;
+}
+
+/* Kata "modern" — dekorasi underline gradient halus */
+.hero-heading__highlight {
+  font-style: normal;
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.hero-heading__highlight::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -0.06em;
+  width: 100%;
+  height: 0.06em;
+  background: linear-gradient(90deg, #4ade80, #34d399, transparent);
+  border-radius: 9999px;
+}
+
+/* Baris 2: gradient fill hijau */
+.hero-heading__accent {
+  display: block;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-weight: 800;
+  background: linear-gradient(135deg, #4ade80 0%, #34d399 45%, #6ee7b7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  isolation: isolate;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  line-height: 1.1;
 }
 
 @media (min-width: 768px) {
@@ -509,15 +565,8 @@
   .hero-heading { font-size: 4.75rem; }
 }
 
-.hero-heading__accent {
-  display: block;
-  background: linear-gradient(135deg, #4ade80, #34d399, #6ee7b7);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  isolation: isolate;
-  transform: translateZ(0);
-  backface-visibility: hidden;
+@media (min-width: 1536px) {
+  .hero-heading { font-size: 5.25rem; }
 }
 
 /* Description */

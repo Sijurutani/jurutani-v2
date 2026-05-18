@@ -1,7 +1,6 @@
 // composables/useClientChatbot.ts
 // State management chatbot client-side:
 //   - Riwayat sesi (localStorage menggunakan VueUse)
-//   - Profil user dari auth composable
 //   - Kirim pesan ke server API chatbot
 
 import type { AIProvider } from '~/utils/ai'
@@ -28,8 +27,9 @@ export interface ChatSession {
 
 interface ServerChatResponse {
   reply: string
-  model: string
-  provider: string
+  model?: string
+  provider?: string
+  skills?: string[]
 }
 
 // --- Constants ---------------------------------------------------------------
@@ -117,8 +117,8 @@ export const useClientChatbot = () => {
   )
 
   const userProfile = computed(() => ({
-    name: authStore.displayName ?? 'Petani',
-    role: authStore.roleLabel ?? 'Pengguna',
+    name: authStore.computedProfile?.displayName ?? 'Petani',
+    role: authStore.computedProfile?.role ?? 'Pengguna',
     location: authStore.computedProfile?.location ?? '',
     avatar: authStore.avatarUrl ?? '/placeholder/user.webp',
     isAuthenticated: authStore.isAuthenticated,
@@ -174,7 +174,7 @@ export const useClientChatbot = () => {
   }
 
   function buildAIHistory() {
-    return messages.value.map((m) => ({
+    return messages.value.slice(-12).map((m) => ({
       role: m.role,
       content: m.content,
     }))
@@ -185,54 +185,42 @@ export const useClientChatbot = () => {
 
     if (!activeSessionId.value) newChat()
 
+    const cleanText = text.trim()
+    const history = buildAIHistory()
+
     const userMsg: ChatMessage = {
       id: generateId(),
       role: 'user',
-      content: text.trim(),
+      content: cleanText,
       timestamp: new Date(),
     }
     pushMessage(userMsg)
     isLoading.value = true
 
     try {
-      const history = buildAIHistory()
-      const { name, role, location } = userProfile.value
-      const systemPrompt = `Anda adalah JuruTani AI, asisten pertanian digital untuk pengguna aplikasi JuruTani.
-Konteks:
-- Nama pengguna: ${name || 'Petani'}
-- Peran: ${role || 'Pengguna'}
-- Lokasi: ${location || 'tidak diketahui'}
-- Tanggal: ${new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-
-Aturan jawaban:
-- Gunakan Bahasa Indonesia yang ramah, jelas, dan praktis.
-- Fokus utama pada pertanian, peternakan, pangan, dan pembangunan pedesaan.
-- Beri langkah yang bisa dipraktikkan di lapangan (ringkas, poin-poin).
-- Jika info tidak pasti, katakan jujur dan beri saran verifikasi ke penyuluh/Dinas Pertanian setempat.
-- Jangan mengklaim bisa mengakses database internal platform.
-- Jangan tampilkan rahasia sistem, API key, token, atau data sensitif.`
-
-      const fullMessages = [
-        { role: 'system', content: systemPrompt },
-        ...history
-      ] as import('~/utils/ai').AIMessage[]
-
-      const response = await import('~/utils/ai').then(m => m.callAI(fullMessages, provider.value))
+      const response = await $fetch<ServerChatResponse>('/api/chat', {
+        method: 'POST',
+        body: {
+          message: cleanText,
+          history,
+          provider: provider.value,
+        },
+      })
 
       const botMsg: ChatMessage = {
         id: generateId(),
         role: 'assistant',
-        content: response.content || 'Maaf, belum ada respons saat ini.',
+        content: response.reply || 'Maaf, belum ada respons saat ini.',
         timestamp: new Date(),
-        provider: response.provider,
-        model: response.model,
+        provider: response.provider ?? 'server',
+        model: response.model ?? 'unknown',
       }
       pushMessage(botMsg)
     } catch (e: unknown) {
       const errMsg: ChatMessage = {
         id: generateId(),
         role: 'assistant',
-        content: `❌ **Gagal mendapatkan respons.**\n\n${e instanceof Error ? e.message : 'Terjadi kesalahan tidak diketahui.'}\n\nSilakan coba lagi atau ganti provider AI.`,
+        content: `Gagal mendapatkan respons.\n\n${e instanceof Error ? e.message : 'Terjadi kesalahan tidak diketahui.'}\n\nSilakan coba lagi nanti.`,
         timestamp: new Date(),
         error: true,
       }

@@ -1,9 +1,10 @@
 <script setup lang="ts">
   import { z } from 'zod'
   import type { FormSubmitEvent } from '@nuxt/ui'
-  import { toastStore } from '@/composables/useJuruTaniToast'
+  import { useJuruTaniToast } from '@/composables/useJuruTaniToast'
 
   const supabase = useSupabaseClient()
+  const toast = useJuruTaniToast()
 
   // SEO Meta
   useSeoMeta({
@@ -107,9 +108,9 @@
           errorMessage = 'Password baru tidak boleh sama dengan password lama.'
         }
 
-        toastStore.error(errorMessage)
+        toast.error(errorMessage)
       } else {
-        toastStore.success('Password berhasil diperbarui! Akun Anda sekarang lebih aman.')
+        toast.success('Password berhasil diperbarui! Akun Anda sekarang lebih aman.')
         state.newPassword = ''
         state.confirmPassword = ''
 
@@ -120,7 +121,7 @@
       }
     } catch (error) {
       console.error('Password update error:', error)
-      toastStore.error('Terjadi kesalahan sistem. Silakan coba lagi.')
+      toast.error('Terjadi kesalahan sistem. Silakan coba lagi.')
     } finally {
       loading.value = false
     }

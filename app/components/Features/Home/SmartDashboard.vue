@@ -1,15 +1,108 @@
 <script setup lang="ts">
+  import type { HomeExpert, HomeInstructor } from '~/composables/useHomeData'
+
+  // ── Props dari index.vue ──────────────────────────────────────────────────
+  const props = defineProps<{
+    experts: HomeExpert[]
+    instructors: HomeInstructor[]
+  }>()
+
   const supabase = useSupabaseClient()
   const authStore = useAuthStore()
   const toast = useToast()
 
-  // ── Cuaca ──────────────────────────────────────────────────────────────────
-  const { weatherData, isLoading: weatherLoading, error: weatherError, requestLocation, fetchDefault } = useWeatherData()
+  const BASE_URL = 'https://api.openweathermap.org/data/2.5'
+  const API_KEY = '416f0ed0bb28d3110beedecf5fa9cf85'
+
+  const weatherData = ref<any>(null)
+  const weatherLoading = ref(false)
+  const weatherError = ref('')
+  // 'idle' = belum minta izin, 'requesting' = sedang minta, 'granted' = OK, 'denied' = ditolak
+  const locationStatus = ref<'idle' | 'requesting' | 'granted' | 'denied'>('idle')
+
   const currentTime = ref('')
   const tick = () => {
     currentTime.value = new Intl.DateTimeFormat('id-ID', {
       hour: '2-digit', minute: '2-digit', hour12: false,
     }).format(new Date())
+  }
+
+  const fetchWeather = async (lat: number, lon: number) => {
+    weatherLoading.value = true
+    weatherError.value = ''
+    try {
+      const res = await fetch(
+        `${BASE_URL}/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=id`,
+      )
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.message || 'Gagal memuat cuaca')
+      weatherData.value = data
+    } catch (e) {
+      weatherError.value = e instanceof Error ? e.message : 'Gagal memuat cuaca'
+      weatherData.value = null
+    } finally {
+      weatherLoading.value = false
+    }
+  }
+
+  const fetchDefault = () => {
+    locationStatus.value = 'denied'
+    fetchWeather(-6.2088, 106.8456)
+  }
+
+  const requestLocation = () => {
+    if (!import.meta.client) return
+    if (!navigator.geolocation) {
+      weatherError.value = 'Geolocation tidak didukung'
+      fetchDefault()
+      return
+    }
+    locationStatus.value = 'requesting'
+    weatherLoading.value = true
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        locationStatus.value = 'granted'
+        fetchWeather(coords.latitude, coords.longitude)
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          locationStatus.value = 'denied'
+          // Tetap tampilkan cuaca Jakarta sebagai fallback setelah ditolak
+          fetchWeather(-6.2088, 106.8456)
+        } else {
+          locationStatus.value = 'denied'
+          fetchDefault()
+        }
+        weatherLoading.value = false
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300_000 },
+    )
+  }
+
+  // Cek apakah permission sudah diberikan sebelumnya (tanpa trigger prompt)
+  const checkPermissionAndFetch = async () => {
+    if (!import.meta.client) return
+    if (!navigator.permissions) {
+      // Browser tidak support Permissions API → langsung minta
+      requestLocation()
+      return
+    }
+    try {
+      const perm = await navigator.permissions.query({ name: 'geolocation' })
+      if (perm.state === 'granted') {
+        locationStatus.value = 'requesting'
+        requestLocation()
+      } else if (perm.state === 'denied') {
+        locationStatus.value = 'denied'
+        fetchWeather(-6.2088, 106.8456)
+      } else {
+        // 'prompt' — tampilkan UI dulu, biarkan user klik
+        locationStatus.value = 'idle'
+        weatherLoading.value = false
+      }
+    } catch {
+      requestLocation()
+    }
   }
 
   const farmingSuitable = computed(() => {
@@ -34,51 +127,8 @@
     return 'from-indigo-700 via-blue-800 to-cyan-900'
   })
 
-  // ── Pakar & Penyuluh ───────────────────────────────────────────────────────
-  interface Expert {
-    id: number
-    user_id: string
-    category: string
-    note: string
-    profiles: { full_name: string; avatar_url: string } | null
-  }
-
-  interface Instructor {
-    id: number
-    user_id: string
-    provinces: string
-    district: string
-    profiles: { full_name: string; avatar_url: string } | null
-  }
-
-  const { data: expertsData } = await useAsyncData(
-    'home-experts',
-    async () => {
-      const { data } = await supabase
-        .from('experts')
-        .select('id, user_id, category, note, profiles!inner(full_name, avatar_url)')
-        .order('id', { ascending: false })
-        .limit(4)
-      return (data || []) as unknown as Expert[]
-    },
-    { dedupe: 'defer' },
-  )
-
-  const { data: instructorsData } = await useAsyncData(
-    'home-instructors',
-    async () => {
-      const { data } = await supabase
-        .from('instructors')
-        .select('id, user_id, provinces, district, profiles!inner(full_name, avatar_url)')
-        .order('id', { ascending: false })
-        .limit(4)
-      return (data || []) as unknown as Instructor[]
-    },
-    { dedupe: 'defer' },
-  )
-
-  const experts = computed(() => expertsData.value || [])
-  const instructors = computed(() => instructorsData.value || [])
+  const experts = computed(() => props.experts)
+  const instructors = computed(() => props.instructors)
 
   const startingId = ref<number | null>(null)
 
@@ -100,7 +150,7 @@
 
   onMounted(() => {
     if (import.meta.client) {
-      fetchDefault()
+      checkPermissionAndFetch()
       tick()
       clockTimer = setInterval(tick, 30_000)
     }
@@ -116,15 +166,11 @@
     <!-- Header Dashboard -->
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
       <div>
-        <!-- Badge -->
-        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100/50 dark:bg-green-900/20 border border-green-500/20 mb-3 shadow-sm">
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-          </span>
-          <span class="text-[10px] font-extrabold uppercase tracking-widest text-green-700 dark:text-green-400">
-            Akses Cepat
-          </span>
+        <!-- Badge with glass sweep -->
+        <div class="section-badge mb-3">
+          <span class="section-badge__dot" />
+          <span class="section-badge__text">Akses Cepat</span>
+          <span class="section-badge__sweep" aria-hidden="true" />
         </div>
 
         <h2 class="text-3xl md:text-4xl font-black text-gray-900 dark:text-gray-50 tracking-tight">
@@ -220,11 +266,35 @@
           <div class="absolute inset-0 rounded-2xl border-2 border-white/0 group-hover:border-white/20 transition-all duration-500 pointer-events-none" />
         </NuxtLink>
 
-        <!-- Loading / Error Weather -->
+        <!-- ── Location Permission Prompt (idle state) ── -->
+        <div
+          v-if="locationStatus === 'idle'"
+          class="flex-1 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 flex flex-col items-center justify-center p-8 gap-4 min-h-[250px] text-center"
+        >
+          <div class="w-14 h-14 rounded-full bg-green-500/20 border border-green-400/30 flex items-center justify-center">
+            <UIcon name="i-lucide-map-pin" class="w-7 h-7 text-green-400" />
+          </div>
+          <div>
+            <p class="text-base font-bold text-white">Izinkan Akses Lokasi</p>
+            <p class="text-xs text-white/55 mt-1 max-w-[220px]">
+              Untuk menampilkan cuaca di lokasi Anda secara akurat
+            </p>
+          </div>
+          <button
+            class="px-5 py-2.5 bg-green-500 hover:bg-green-400 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-green-500/30"
+            @click="requestLocation"
+          >
+            Aktifkan Lokasi
+          </button>
+        </div>
+
+        <!-- Loading -->
         <div v-else-if="weatherLoading" class="flex-1 rounded-2xl bg-gray-200 dark:bg-gray-800 animate-pulse min-h-[250px]" />
-        <div v-else class="flex-1 rounded-2xl bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center p-6 gap-3 min-h-[250px]">
+
+        <!-- Error -->
+        <div v-else-if="weatherError && !weatherData" class="flex-1 rounded-2xl bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center p-6 gap-3 min-h-[250px]">
           <UIcon name="i-lucide-cloud-off" class="w-10 h-10 text-gray-400" />
-          <p class="text-sm text-gray-500 text-center">{{ weatherError || 'Gagal memuat cuaca' }}</p>
+          <p class="text-sm text-gray-500 text-center">{{ weatherError }}</p>
           <button class="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-colors" @click="requestLocation">
             Coba Lagi
           </button>
@@ -318,6 +388,56 @@
 </template>
 
 <style scoped>
+/* ── Section Badge (glass + sweep) ── */
+.section-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.85rem;
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: 9999px;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+.section-badge__dot {
+  display: block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: #4ade80;
+  flex-shrink: 0;
+  animation: badge-dot-pulse 2s ease-in-out infinite;
+}
+.section-badge__text {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #16a34a;
+}
+:root.dark .section-badge__text { color: #4ade80; }
+.section-badge__sweep {
+  position: absolute;
+  top: 0; left: 0;
+  width: 55%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%);
+  pointer-events: none;
+  animation: badge-sweep 3.5s ease-in-out infinite;
+}
+@keyframes badge-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@keyframes badge-sweep {
+  0%   { transform: translateX(-200%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateX(280%); opacity: 0; }
+}
+
 .custom-scroll::-webkit-scrollbar {
   width: 4px;
 }
