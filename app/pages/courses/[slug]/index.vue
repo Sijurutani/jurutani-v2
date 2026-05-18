@@ -40,7 +40,7 @@
 
   // ─── Computed ─────────────────────────────────────────────────────────────────
   const isLoggedIn = computed(() => !!authStore.user)
-  const userId = computed(() => authStore.user?.id)
+  const userId = computed(() => authStore.currentUserId)
 
   const avgRating = computed(() => {
     if (!ratings.value.length) return 0

@@ -372,7 +372,7 @@
         images: imagePaths,
         attachments: attachments,
         slug: slug,
-        user_id: user?.id || null,
+        user_id: user?.id || (user as any)?.sub || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }

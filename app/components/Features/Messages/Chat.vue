@@ -318,7 +318,7 @@
 </script>
 
 <template>
-  <div class="flex flex-col h-full overflow-hidden">
+  <div class="flex flex-col h-full overflow-hidden relative">
     <div
       class="shrink-0 h-14 border-b border-default bg-default flex items-center px-3 gap-2"
     >
@@ -350,7 +350,7 @@
             color="neutral"
             variant="ghost"
             icon="i-lucide-user"
-            :to="`/profile/${otherUser.id}`"
+            :to="`/profile/${otherUser.username || otherUser.id}`"
           >
             Profil
           </UButton>
@@ -360,7 +360,7 @@
 
     <div
       ref="scrollEl"
-      class="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-1 relative"
+      class="flex-1 overflow-y-auto px-4 pt-4 pb-28 flex flex-col gap-1 relative"
       @scroll="onScroll"
     >
       <div
@@ -578,7 +578,7 @@
           color="neutral"
           variant="ghost"
           type="button"
-          class="sticky bottom-2 self-end size-9 rounded-full bg-primary text-white shadow-lg flex items-center justify-center transition-all hover:bg-primary/90"
+          class="sticky bottom-28 self-end size-9 rounded-full bg-primary text-white shadow-lg flex items-center justify-center transition-all hover:bg-primary/90"
           @click="jumpToLatest"
         >
           <span
@@ -591,10 +591,11 @@
       </Transition>
     </div>
 
-    <div
-      v-if="pendingFiles.length"
-      class="flex items-center gap-2 px-4 py-2 border-t border-default flex-wrap bg-elevated/50"
-    >
+    <div class="absolute bottom-4 left-4 right-4 z-10 flex flex-col gap-2 pointer-events-none">
+      <div
+        v-if="pendingFiles.length"
+        class="flex items-center gap-2 px-3 py-2 flex-wrap bg-elevated/90 backdrop-blur-xl border border-default shadow-lg rounded-2xl pointer-events-auto"
+      >
       <div v-for="(pf, idx) in pendingFiles" :key="idx" class="relative group">
         <UButton
           v-if="pf.type === 'image'"
@@ -629,51 +630,53 @@
           <UIcon name="i-lucide-x" class="size-2.5" />
         </UButton>
       </div>
-    </div>
+      </div>
 
-    <div class="px-4 py-3 border-t border-default shrink-0">
-      <div class="flex items-end gap-2">
-        <UTooltip text="Lampirkan file / gambar">
+      <div class="bg-elevated/80 backdrop-blur-xl border border-emerald-100/50 dark:border-emerald-900/40 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] rounded-3xl p-2 shrink-0 pointer-events-auto transition-all duration-300">
+        <div class="flex items-end gap-2">
+          <UTooltip text="Lampirkan file / gambar">
+            <UButton
+              icon="i-lucide-paperclip"
+              color="neutral"
+              variant="ghost"
+              square
+              size="sm"
+              class="mb-0.5 shrink-0 rounded-full"
+              @click="fileInput?.click()"
+            />
+          </UTooltip>
+          <input
+            ref="fileInput"
+            type="file"
+            multiple
+            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.zip"
+            class="sr-only"
+            @change="onFilePick"
+          />
+
+          <UTextarea
+            v-model="text"
+            class="flex-1"
+            :rows="1"
+            autoresize
+            :maxrows="6"
+            placeholder="Tulis pesan..."
+            :disabled="sending"
+            :ui="{ base: 'resize-none border-none bg-transparent shadow-none focus:ring-0 px-2' }"
+            @keydown="onKeydown"
+          />
+
           <UButton
-            icon="i-lucide-paperclip"
-            color="neutral"
-            variant="ghost"
+            icon="i-lucide-send"
+            :loading="sending"
+            :disabled="!text.trim() && !pendingFiles.length"
             square
             size="sm"
-            class="mb-0.5 shrink-0"
-            @click="fileInput?.click()"
+            color="primary"
+            class="mb-0.5 shrink-0 rounded-full shadow-md"
+            @click="doSend"
           />
-        </UTooltip>
-        <input
-          ref="fileInput"
-          type="file"
-          multiple
-          accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.zip"
-          class="sr-only"
-          @change="onFilePick"
-        />
-
-        <UTextarea
-          v-model="text"
-          class="flex-1"
-          :rows="1"
-          autoresize
-          :maxrows="6"
-          placeholder="Tulis pesan... (Enter kirim, Shift+Enter baris baru)"
-          :disabled="sending"
-          :ui="{ base: 'resize-none' }"
-          @keydown="onKeydown"
-        />
-
-        <UButton
-          icon="i-lucide-send"
-          :loading="sending"
-          :disabled="!text.trim() && !pendingFiles.length"
-          square
-          size="sm"
-          class="mb-0.5 shrink-0"
-          @click="doSend"
-        />
+        </div>
       </div>
     </div>
   </div>

@@ -53,6 +53,12 @@
     markets: 'Pasar',
   }
 
+  const historyTabs = [
+    { label: 'Semua', value: 'all', icon: 'i-lucide-layout-grid' },
+    { label: 'Berita', value: 'news', icon: 'i-lucide-newspaper' },
+    { label: 'Pasar', value: 'markets', icon: 'i-lucide-shopping-cart' }
+  ]
+
   const statusColorMap: Record<
     string,
     'success' | 'warning' | 'error' | 'neutral'
@@ -128,7 +134,7 @@
         )
         return
       }
-      currentUserId.value = user.id
+      currentUserId.value = user.id || (user as any).sub
     } catch (err) {
       console.error('Error fetching current user:', err)
       userError.value = err
@@ -357,69 +363,91 @@
 </script>
 
 <template>
-  <div class="min-h-screen py-12 px-4 transition-colors duration-200">
-    <div class="container mx-auto max-w-4xl">
-      <div class="text-center mb-8">
-        <div
-          class="inline-flex items-center justify-center w-16 h-16 bg-green-600 dark:bg-green-700 rounded-full mb-4 shadow-lg dark:shadow-green-900/50"
-        >
-          <UIcon name="i-lucide-clock" class="w-8 h-8 text-white" />
+  <main class="min-h-screen font-sans">
+    <!-- ════════ HERO ════════ -->
+    <header class="pt-32 pb-12 flex flex-col items-center text-center px-5">
+      <!-- Logo circle -->
+      <div class="flex justify-center mb-6">
+        <div class="w-16 h-16 rounded-full flex items-center justify-center shadow-lg bg-white dark:bg-gray-900/60 border border-green-100 dark:border-gray-700">
+          <NuxtImg
+            src="/jurutani/small-transparent.webp"
+            alt="JuruTani Logo"
+            class="w-10 h-10"
+            width="40"
+            height="40"
+          />
         </div>
-        <h1 class="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
-          Riwayat Aktivitas
-        </h1>
-        <p class="text-gray-600 dark:text-gray-400 text-sm">
-          Pantau dan kelola aktivitas Anda dengan mudah
-        </p>
       </div>
 
-      <div
-        class="bg-white dark:bg-gray-900 rounded-lg shadow-sm dark:shadow-md border border-gray-100 dark:border-gray-800 mb-6 overflow-hidden transition-all duration-200"
-      >
-        <div class="flex border-b border-gray-100 dark:border-gray-800">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            v-for="item in filterItems"
-            :key="item"
-            :class="[
-              'flex-1 px-6 py-4 text-center font-medium transition-all duration-200',
-              filter === item
-                ? 'text-green-600 dark:text-green-400 border-b-2 border-green-600 dark:border-green-500 bg-green-50 dark:bg-green-950/30'
-                : 'text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800/50',
-            ]"
-            @click="changeFilter(item)"
-          >
-            {{ filterLabels[item] }}
-          </UButton>
-        </div>
+      <!-- Badge -->
+      <div class="relative inline-flex items-center gap-1.5 px-3.5 py-1.5 mb-6
+                  bg-white/55 dark:bg-white/[0.08]
+                  border border-white/70 dark:border-white/[0.18]
+                  rounded-full backdrop-blur-md
+                  text-[0.7rem] font-bold tracking-widest uppercase
+                  text-emerald-700 dark:text-emerald-300
+                  shadow-[0_2px_12px_rgba(16,185,129,0.1)]
+                  overflow-hidden">
+        <span class="block w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
+        <span>Jejak Digital</span>
+        <span
+          class="absolute top-0 left-0 w-[55%] h-full pointer-events-none rounded-[inherit]"
+          style="background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%);
+                 animation: badge-sweep 3.5s ease-in-out infinite;"
+          aria-hidden="true"
+        />
+      </div>
 
-        <div class="p-4 space-y-4">
-          <AppSearchBar
-            v-model="search"
-            placeholder="Cari judul berita atau produk..."
+      <!-- Title -->
+      <h1 class="text-[clamp(2.25rem,5vw,3.75rem)] font-black leading-[1.1] tracking-tight text-gray-900 dark:text-gray-50 mb-5">
+        Riwayat<br />
+        <span class="bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
+          Aktivitas
+        </span>
+      </h1>
+
+      <!-- Description -->
+      <p class="text-base leading-relaxed text-gray-500 dark:text-gray-400 max-w-[38rem]">
+        Pantau interaksi, aktivitas, serta partisipasi Anda di seluruh platform JuruTani.
+      </p>
+    </header>
+
+    <div class="max-w-[56rem] mx-auto px-5 sm:px-8 pb-20 sm:pb-24">
+      <div class="p-7 rounded-2xl bg-white dark:bg-white/5 border border-emerald-100/70 dark:border-emerald-900/40 shadow-sm relative overflow-hidden transition-all duration-200">
+        <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-cyan-500/5 opacity-50" />
+        <div class="relative z-10">
+          <!-- TABS -->
+          <UTabs
+            v-model="filter"
+            color="neutral"
+            variant="link"
+            :content="false"
+            :items="historyTabs"
+            class="w-full mb-6"
           />
-          <div
-            class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-          >
-            <AppSortDropdown
-              :sort-options="sortOptions"
-              :current-sort="sort"
-              @update:sort="handleSortChange"
+
+          <!-- SEARCH & SORT -->
+          <div class="space-y-4 mb-8">
+            <AppSearchBar
+              v-model="search"
+              placeholder="Cari judul berita atau produk..."
             />
-            <div
-              v-if="!isLoading && hasData"
-              class="text-sm text-gray-600 dark:text-gray-400"
-            >
-              Menampilkan
-              <span class="font-semibold text-green-600 dark:text-green-400">{{
-                data.items.length
-              }}</span>
-              dari <span class="font-semibold">{{ data.total }}</span> aktivitas
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <AppSortDropdown
+                :sort-options="sortOptions"
+                :current-sort="sort"
+                @update:sort="handleSortChange"
+              />
+              <div
+                v-if="!isLoading && hasData"
+                class="text-sm text-gray-600 dark:text-gray-400"
+              >
+                Menampilkan
+                <span class="font-semibold text-green-600 dark:text-green-400">{{ data.items.length }}</span>
+                dari <span class="font-semibold">{{ data.total }}</span> aktivitas
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
       <div v-if="isLoading" class="text-center py-16">
         <div
@@ -496,18 +524,18 @@
         </NuxtLink>
       </div>
 
-      <div v-else class="space-y-4">
+      <div v-else class="space-y-4 mb-6">
         <div
           v-for="item in data.items"
           :key="`${item.type}-${item.id}`"
-          class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md dark:hover:shadow-lg dark:shadow-black/50 transition-all duration-200"
+          class="p-5 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-emerald-50 dark:border-emerald-900/20 shadow-sm hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-800/60 transition-all duration-200 group"
         >
-          <div class="p-6">
-            <div class="flex items-start justify-between mb-4">
-              <div class="flex items-center space-x-3">
+          <div class="relative z-10">
+            <div class="flex items-center justify-between mb-3 sm:mb-4 gap-2">
+              <div class="flex items-center space-x-2 sm:space-x-3 min-w-0">
                 <span
                   :class="[
-                    'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium transition-colors',
+                    'inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium transition-colors shrink-0',
                     item.type === 'news'
                       ? 'bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300'
                       : 'bg-green-100 dark:bg-green-950/50 text-green-800 dark:text-green-300',
@@ -519,16 +547,16 @@
                         ? 'i-lucide-newspaper'
                         : 'i-lucide-shopping-cart'
                     "
-                    class="w-4 h-4 mr-1"
+                    class="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1"
                   />
-                  {{ item.typeLabel }}
+                  <span class="hidden sm:inline">{{ item.typeLabel }}</span>
                 </span>
 
-                <span class="text-sm text-gray-500 dark:text-gray-400">
+                <span class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
                   {{
                     new Date(item.created_at).toLocaleDateString('id-ID', {
                       year: 'numeric',
-                      month: 'long',
+                      month: 'short',
                       day: 'numeric',
                     })
                   }}
@@ -538,19 +566,20 @@
               <UBadge
                 :color="getStatusInfo(item.status, item.type).color"
                 variant="soft"
-                class="inline-flex items-center px-3 py-1 text-sm font-medium"
+                class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 text-xs sm:text-sm font-medium shrink-0"
+                :title="getStatusInfo(item.status, item.type).label"
               >
                 <UIcon
                   :name="getStatusInfo(item.status, item.type).icon"
-                  class="w-4 h-4 mr-1"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1"
                 />
-                {{ getStatusInfo(item.status, item.type).label }}
+                <span class="hidden sm:inline">{{ getStatusInfo(item.status, item.type).label }}</span>
               </UBadge>
             </div>
 
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-3 sm:space-x-4">
               <div
-                class="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-gray-100 dark:bg-gray-800"
+                class="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden shrink-0 bg-gray-100 dark:bg-gray-800"
               >
                 <NuxtImg
                   :src="item.imageUrl"
@@ -566,22 +595,23 @@
 
               <div class="flex-1 min-w-0">
                 <h3
-                  class="text-lg font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2"
+                  class="text-sm sm:text-lg font-semibold text-gray-900 dark:text-white mb-1.5 sm:mb-2 line-clamp-2"
                 >
                   {{ item.title }}
                 </h3>
 
-                <div class="flex items-center justify-between">
-                  <div class="text-sm text-gray-500 dark:text-gray-400">
-                    ID: {{ item.type.toUpperCase() }}-{{ item.id }}
+                <div class="flex items-center justify-between gap-2">
+                  <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate" :title="`ID: ${item.type.toUpperCase()}-${item.id}`">
+                    ID: {{ item.type.toUpperCase() }}-{{ item.id.split('-')[0] }}
                   </div>
 
                   <NuxtLink
                     :to="item.route"
-                    class="inline-flex items-center px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-950/50 transition-colors"
+                    class="inline-flex items-center justify-center p-2 sm:px-4 sm:py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-950/50 transition-colors shrink-0"
+                    title="Lihat Detail"
                   >
-                    Lihat Detail
-                    <UIcon name="i-lucide-arrow-right" class="w-4 h-4 ml-1" />
+                    <span class="hidden sm:inline">Lihat Detail</span>
+                    <UIcon name="i-lucide-arrow-right" class="w-4 h-4 sm:ml-1" />
                   </NuxtLink>
                 </div>
               </div>
@@ -600,8 +630,10 @@
         :show-first-last="true"
         @update:page="handlePageChange"
       />
+        </div>
+      </div>
     </div>
-  </div>
+  </main>
 </template>
 
 <style scoped>
@@ -612,4 +644,12 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+</style>
+<style>
+@keyframes badge-sweep {
+  0% { transform: translateX(-200%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateX(280%); opacity: 0; }
+}
 </style>

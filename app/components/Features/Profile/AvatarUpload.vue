@@ -113,7 +113,7 @@ const handleImageError = (event: Event) => {
 </script>
 
 <template>
-  <div class="p-2 space-y-5">
+  <div class="p-5 sm:p-6 space-y-5">
     <!-- Preview Avatar -->
     <div class="flex justify-center">
       <div class="relative">

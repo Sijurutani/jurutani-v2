@@ -93,11 +93,11 @@
   }
 
   const resolveUserId = async () => {
-    if (authStore.user?.id) return authStore.user.id
+    if (authStore.currentUserId) return authStore.currentUserId
 
     for (let attempt = 0; attempt < 8; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 200))
-      if (authStore.user?.id) return authStore.user.id
+      if (authStore.currentUserId) return authStore.currentUserId
     }
 
     return null
@@ -174,12 +174,9 @@
   <UForm
     :schema="schema"
     :state="state"
-    class="bg-white dark:bg-gray-900 rounded-lg shadow-md dark:shadow-lg border border-gray-100 dark:border-gray-800 p-6 max-w-2xl mx-auto transition-all duration-200"
+    class="p-5 sm:p-6 transition-all duration-200"
     @submit="handleSubmit"
   >
-    <h2 class="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
-      Edit Profil
-    </h2>
 
     <!-- Avatar Upload -->
     <div class="mb-6">

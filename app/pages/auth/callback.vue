@@ -59,7 +59,7 @@
       }
 
       statusMessage.value = 'Memuat profil...'
-      await authStore.fetchProfile(user.id)
+      await authStore.fetchProfile(user.id || (user as any).sub)
 
       const fullName =
         authStore.displayName || user.email?.split('@')[0] || 'Petani Hebat'

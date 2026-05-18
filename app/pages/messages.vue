@@ -131,6 +131,8 @@
               :my-id="String(myId || '')"
               @back="router.push('/messages')"
               @refresh-list="fetchConversations()"
+              @new-chat="showNewChatModal = true"
+              @chat-admin="handleChatAdmin"
             />
           </div>
         </div>

@@ -23,7 +23,7 @@ export const useMessages = () => {
   const authStore = useAuthStore()
 
   const myId = computed(
-    () => authStore.user?.id || authStore.profile?.id || authStore.computedProfile?.id,
+    () => authStore.currentUserId || authStore.profile?.id || authStore.computedProfile?.id,
   )
 
   const loadingConversations = ref(false)

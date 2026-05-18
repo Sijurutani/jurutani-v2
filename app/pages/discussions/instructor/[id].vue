@@ -88,7 +88,7 @@
         .from('conversations')
         .select('id')
         .or(
-          `and(participant1_id.eq.${user.id},participant2_id.eq.${instructor.value.user_id}),and(participant1_id.eq.${instructor.value.user_id},participant2_id.eq.${user.id})`,
+          `and(participant1_id.eq.${user.id || (user as any).sub},participant2_id.eq.${instructor.value.user_id}),and(participant1_id.eq.${instructor.value.user_id},participant2_id.eq.${user.id || (user as any).sub})`,
         )
         .single()
 
@@ -98,7 +98,7 @@
         const { data: newConversation, error: createError } = await supabase
           .from('conversations')
           .insert({
-            participant1_id: user.id,
+            participant1_id: user.id || (user as any).sub,
             participant2_id: instructor.value.user_id,
           })
           .select('id')

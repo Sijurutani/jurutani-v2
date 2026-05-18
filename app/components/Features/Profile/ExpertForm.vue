@@ -30,11 +30,11 @@
   const expertCategories = ref<{ name: string }[]>([])
 
   const resolveUserId = async () => {
-    if (authStore.user?.id) return authStore.user.id
+    if (authStore.currentUserId) return authStore.currentUserId
 
     for (let attempt = 0; attempt < 8; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 200))
-      if (authStore.user?.id) return authStore.user.id
+      if (authStore.currentUserId) return authStore.currentUserId
     }
 
     return null
@@ -92,7 +92,7 @@
 
   // Submit handler
   const handleSubmit = async (event: FormSubmitEvent<Schema>) => {
-    if (!authStore.user?.id) return
+    if (!authStore.currentUserId) return
 
     isSubmitting.value = true
 
@@ -154,18 +154,7 @@
 </script>
 
 <template>
-  <div
-    class="bg-white dark:bg-gray-900 rounded-lg shadow-md dark:shadow-lg border border-gray-100 dark:border-gray-800 p-6 transition-all duration-200"
-  >
-    <h3
-      class="text-xl font-semibold mb-6 text-gray-900 dark:text-white flex items-center"
-    >
-      <UIcon
-        name="i-lucide-lightbulb"
-        class="w-5 h-5 mr-2 text-green-600 dark:text-green-400"
-      />
-      Data Profesional Pakar
-    </h3>
+  <div class="p-5 sm:p-6 transition-all duration-200">
 
     <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center py-8">

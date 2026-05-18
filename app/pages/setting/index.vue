@@ -117,29 +117,62 @@
 </script>
 
 <template>
-  <div class="min-h-screen py-12 px-4 transition-colors duration-200">
-    <div class="max-w-2xl mx-auto">
-      <!-- Header Section -->
-      <div class="text-center mb-8">
-        <div
-          class="inline-flex items-center justify-center w-16 h-16 bg-green-600 dark:bg-green-700 rounded-full mb-4 shadow-lg dark:shadow-green-900/50"
-        >
-          <UIcon name="i-lucide-shield" class="w-8 h-8 text-white" />
+  <main class="min-h-screen font-sans">
+    <!-- ════════ HERO ════════ -->
+    <header class="pt-32 pb-12 flex flex-col items-center text-center px-5">
+      <!-- Logo circle -->
+      <div class="flex justify-center mb-6">
+        <div class="w-16 h-16 rounded-full flex items-center justify-center shadow-lg bg-white dark:bg-gray-900/60 border border-green-100 dark:border-gray-700">
+          <NuxtImg
+            src="/jurutani/small-transparent.webp"
+            alt="JuruTani Logo"
+            class="w-10 h-10"
+            width="40"
+            height="40"
+          />
         </div>
-        <h1 class="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
-          Pengaturan Akun
-        </h1>
-        <p class="text-gray-600 dark:text-gray-400 text-sm">
-          Kelola pengaturan email akun JuruTani Anda dengan aman.
-        </p>
       </div>
 
+      <!-- Badge -->
+      <div class="relative inline-flex items-center gap-1.5 px-3.5 py-1.5 mb-6
+                  bg-white/55 dark:bg-white/[0.08]
+                  border border-white/70 dark:border-white/[0.18]
+                  rounded-full backdrop-blur-md
+                  text-[0.7rem] font-bold tracking-widest uppercase
+                  text-emerald-700 dark:text-emerald-300
+                  shadow-[0_2px_12px_rgba(16,185,129,0.1)]
+                  overflow-hidden">
+        <span class="block w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
+        <span>Manajemen Akun</span>
+        <span
+          class="absolute top-0 left-0 w-[55%] h-full pointer-events-none rounded-[inherit]"
+          style="background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%);
+                 animation: badge-sweep 3.5s ease-in-out infinite;"
+          aria-hidden="true"
+        />
+      </div>
+
+      <!-- Title -->
+      <h1 class="text-[clamp(2.25rem,5vw,3.75rem)] font-black leading-[1.1] tracking-tight text-gray-900 dark:text-gray-50 mb-5">
+        Pengaturan<br />
+        <span class="bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
+          Akun JuruTani
+        </span>
+      </h1>
+
+      <!-- Description -->
+      <p class="text-base leading-relaxed text-gray-500 dark:text-gray-400 max-w-[38rem]">
+        Kelola pengaturan email akun JuruTani Anda dengan aman dan efisien.
+      </p>
+    </header>
+
+    <div class="max-w-[48rem] mx-auto px-5 sm:px-8 pb-20 sm:pb-24">
       <div class="space-y-6">
         <!-- Email Settings -->
-        <div
-          class="bg-white dark:bg-gray-900 rounded-xl shadow-lg dark:shadow-md border border-gray-200 dark:border-gray-800 p-6 transition-all duration-200"
-        >
-          <div class="flex items-center mb-6">
+        <div class="p-7 rounded-2xl bg-white dark:bg-white/5 border border-emerald-100/70 dark:border-emerald-900/40 shadow-sm relative overflow-hidden transition-all duration-200">
+          <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-cyan-500/5 opacity-50" />
+          <div class="relative z-10">
+            <div class="flex items-center mb-6">
             <UIcon
               name="i-lucide-mail"
               class="w-6 h-6 text-green-600 dark:text-green-400 mr-3"
@@ -195,14 +228,15 @@
             >
               Ubah Email
             </UButton>
-          </UForm>
+            </UForm>
+          </div>
         </div>
 
         <!-- Password Settings -->
-        <div
-          class="bg-white dark:bg-gray-900 rounded-xl shadow-lg dark:shadow-md border border-gray-200 dark:border-gray-800 p-6 transition-all duration-200"
-        >
-          <div class="flex items-center mb-6">
+        <div class="p-7 rounded-2xl bg-white dark:bg-white/5 border border-emerald-100/70 dark:border-emerald-900/40 shadow-sm relative overflow-hidden transition-all duration-200">
+          <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-cyan-500/5 opacity-50" />
+          <div class="relative z-10">
+            <div class="flex items-center mb-6">
             <UIcon
               name="i-lucide-key"
               class="w-6 h-6 text-green-600 dark:text-green-400 mr-3"
@@ -242,7 +276,8 @@
             >
               Kirim Link Reset Password
             </UButton>
-          </UForm>
+            </UForm>
+          </div>
         </div>
 
         <!-- Success Messages -->
@@ -264,5 +299,14 @@
         </div>
       </div>
     </div>
-  </div>
+  </main>
 </template>
+
+<style>
+@keyframes badge-sweep {
+  0% { transform: translateX(-200%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateX(280%); opacity: 0; }
+}
+</style>

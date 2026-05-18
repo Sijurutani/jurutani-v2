@@ -178,22 +178,56 @@ watch(
 </script>
 
 <template>
-  <div class="min-h-screen py-12 transition-colors duration-200">
-    <div class="container mx-auto px-4 py-8">
-      <div class="text-center mb-8">
-        <div
-          class="inline-flex items-center justify-center w-16 h-16 bg-green-600 dark:bg-green-700 rounded-full mb-4 shadow-lg dark:shadow-green-900/50"
-        >
-          <UIcon name="i-lucide-user" class="w-8 h-8 text-white" />
+  <main class="min-h-screen font-sans">
+    <!-- ════════ HERO ════════ -->
+    <header class="pt-32 pb-12 flex flex-col items-center text-center px-5">
+      <!-- Logo circle -->
+      <div class="flex justify-center mb-6">
+        <div class="w-16 h-16 rounded-full flex items-center justify-center shadow-lg bg-white dark:bg-gray-900/60 border border-green-100 dark:border-gray-700">
+          <NuxtImg
+            src="/jurutani/small-transparent.webp"
+            alt="JuruTani Logo"
+            class="w-10 h-10"
+            width="40"
+            height="40"
+          />
         </div>
-        <h1 class="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
-          Profil Pengguna
-        </h1>
-        <p class="text-gray-600 dark:text-gray-400 text-sm">
-          Kelola informasi akun Anda dengan aman.
-        </p>
       </div>
 
+      <!-- Badge -->
+      <div class="relative inline-flex items-center gap-1.5 px-3.5 py-1.5 mb-6
+                  bg-white/55 dark:bg-white/[0.08]
+                  border border-white/70 dark:border-white/[0.18]
+                  rounded-full backdrop-blur-md
+                  text-[0.7rem] font-bold tracking-widest uppercase
+                  text-emerald-700 dark:text-emerald-300
+                  shadow-[0_2px_12px_rgba(16,185,129,0.1)]
+                  overflow-hidden">
+        <span class="block w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
+        <span>Akun Pengguna</span>
+        <span
+          class="absolute top-0 left-0 w-[55%] h-full pointer-events-none rounded-[inherit]"
+          style="background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%);
+                 animation: badge-sweep 3.5s ease-in-out infinite;"
+          aria-hidden="true"
+        />
+      </div>
+
+      <!-- Title -->
+      <h1 class="text-[clamp(2.25rem,5vw,3.75rem)] font-black leading-[1.1] tracking-tight text-gray-900 dark:text-gray-50 mb-5">
+        Profil<br />
+        <span class="bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
+          Pengguna
+        </span>
+      </h1>
+
+      <!-- Description -->
+      <p class="text-base leading-relaxed text-gray-500 dark:text-gray-400 max-w-[38rem] mb-7">
+        Kelola informasi profil pribadi dan profesional Anda di JuruTani secara aman.
+      </p>
+    </header>
+
+    <div class="max-w-[72rem] mx-auto px-5 sm:px-8 pb-20 sm:pb-24">
 
       <!-- Loading state -->
       <div v-if="loading" class="text-center py-16">
@@ -279,69 +313,66 @@ watch(
           <pre>{{ JSON.stringify(authStore.user, null, 2) }}</pre>
         </div>
 
-        <!-- Profile header card -->
-
-        <div
-          class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/50 border border-gray-100 dark:border-gray-800 overflow-hidden mb-6"
-        >
-          <div
-            class="bg-linear-to-r from-green-600 to-emerald-600 dark:from-green-700 dark:to-emerald-700 px-6 py-8"
-          >
-            <div class="flex flex-col md:flex-row items-center">
-              <div class="relative mb-4 md:mb-0 md:mr-6">
-                <div
-                  class="w-32 h-32 rounded-full overflow-hidden bg-white dark:bg-gray-800 p-1 shadow-lg dark:shadow-black/50"
-                >
-                  <NuxtImg
-                    :src="userData.avatar_url || '//placeholder/user.webp'"
-                    :alt="userData.full_name || 'User'"
-                    class="w-full h-full object-cover rounded-full"
-                    @error="handleImageError"
-                  />
-                </div>
-                <!-- Tombol edit avatar -->
-                <button
-                  type="button"
-                  class="absolute bottom-0 right-0 bg-white dark:bg-gray-800 rounded-full p-2 shadow-md dark:shadow-black/50 border-2 border-green-500 hover:bg-green-50 dark:hover:bg-gray-700 transition-colors duration-200 group"
-                  title="Ganti foto profil"
-                  @click="showAvatarModal = true"
-                >
-                  <UIcon name="i-lucide-camera" class="w-4 h-4 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform duration-200" />
-                </button>
-                <!-- Role badge -->
-                <div
-                  class="absolute -bottom-2 -right-2 bg-white dark:bg-gray-800 rounded-full px-3 py-1 shadow-md dark:shadow-black/50"
-                  :class="{ 'border border-red-400': isAdmin }"
-                >
-                  <span class="text-xs font-semibold text-green-600 dark:text-green-400">
-                    {{ isAdmin ? '⭐ Admin' : authStore.roleLabel }}
-                  </span>
-                </div>
+        <div class="p-7 rounded-2xl bg-white dark:bg-white/5 border border-emerald-100/70 dark:border-emerald-900/40 shadow-sm relative overflow-hidden mb-6">
+          <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-cyan-500/5 opacity-50" />
+          <div class="relative z-10 flex flex-col md:flex-row items-center gap-6">
+            <!-- Avatar -->
+            <div class="relative shrink-0">
+              <div
+                class="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-white dark:bg-gray-900 p-1 shadow-md border border-gray-100 dark:border-gray-800"
+              >
+                <NuxtImg
+                  :src="userData.avatar_url || '//placeholder/user.webp'"
+                  :alt="userData.full_name || 'User'"
+                  class="w-full h-full object-cover rounded-full"
+                  @error="handleImageError"
+                />
               </div>
+              <!-- Tombol edit avatar -->
+              <button
+                type="button"
+                class="absolute bottom-0 right-0 bg-white dark:bg-gray-900 rounded-full p-2 shadow-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200 group"
+                title="Ganti foto profil"
+                @click="showAvatarModal = true"
+              >
+                <UIcon name="i-lucide-camera" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform duration-200" />
+              </button>
+              <!-- Role badge -->
+              <div
+                class="absolute -bottom-2 -left-2 bg-white dark:bg-gray-900 rounded-full px-3 py-1 shadow-sm border border-gray-200 dark:border-gray-700"
+                :class="{ 'border-red-400 dark:border-red-600': isAdmin }"
+              >
+                <span class="text-[0.7rem] font-bold tracking-wider uppercase text-emerald-600 dark:text-emerald-400" :class="{ 'text-red-500 dark:text-red-400': isAdmin }">
+                  {{ isAdmin ? 'Admin' : authStore.roleLabel }}
+                </span>
+              </div>
+            </div>
 
-              <div class="flex-1 text-center md:text-left text-white">
-                <h2 class="text-2xl font-bold mb-1">
-                  {{ userData.full_name || 'Pengguna JuruTani' }}
-                </h2>
-                <p class="text-green-100 dark:text-green-200 text-lg mb-2">
-                  @{{ userData.username || 'username' }}
-                </p>
-                <p class="text-green-50 dark:text-green-100">
-                  {{ userData.email }}
-                </p>
-                <p v-if="userData.phone" class="text-green-50 dark:text-green-100">
-                  📱 {{ userData.phone }}
-                </p>
+            <!-- Info -->
+            <div class="flex-1 text-center md:text-left">
+              <h2 class="text-2xl font-bold mb-1 text-gray-900 dark:text-gray-100">
+                {{ userData.full_name || 'Pengguna JuruTani' }}
+              </h2>
+              <p class="text-emerald-600 dark:text-emerald-400 font-medium mb-3">
+                @{{ userData.username || 'username' }}
+              </p>
+              <div class="flex flex-col sm:flex-row items-center md:items-start gap-2 sm:gap-4 text-sm text-gray-600 dark:text-gray-400">
+                <div class="flex items-center gap-1.5">
+                  <UIcon name="i-lucide-mail" class="w-4 h-4" />
+                  <span>{{ userData.email }}</span>
+                </div>
+                <div v-if="userData.phone" class="flex items-center gap-1.5">
+                  <UIcon name="i-lucide-phone" class="w-4 h-4" />
+                  <span>{{ userData.phone }}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Tabs & content card -->
-        <div
-          class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/50 border border-gray-100 dark:border-gray-800 overflow-hidden"
-        >
-          <div class="p-6">
+        <div class="p-7 rounded-2xl bg-white dark:bg-white/5 border border-emerald-100/70 dark:border-emerald-900/40 shadow-sm relative overflow-hidden">
+          <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-cyan-500/5 opacity-50" />
+          <div class="relative z-10">
             <UTabs
               v-model="activeTab"
               color="neutral"
@@ -406,7 +437,7 @@ watch(
                 <!-- Kontak -->
                 <div class="space-y-4">
                   <h3
-                    class="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b border-green-200 dark:border-green-800 pb-2"
+                    class="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b border-emerald-100 dark:border-gray-800 pb-2"
                   >
                     Kontak
                   </h3>
@@ -444,7 +475,7 @@ watch(
                 <!-- Alamat -->
                 <div class="space-y-4">
                   <h3
-                    class="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b border-green-200 dark:border-green-800 pb-2"
+                    class="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b border-emerald-100 dark:border-gray-800 pb-2"
                   >
                     Alamat
                   </h3>
@@ -525,7 +556,7 @@ watch(
                 class="space-y-4"
               >
                 <div
-                  class="p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800"
+                  class="p-6 bg-white/50 dark:bg-gray-900/50 rounded-xl border border-emerald-50 dark:border-gray-800"
                 >
                   <!-- FIX #4: Akses field tanpa 'as any' karena professionalData
                        sudah narrowed — pakai v-if pada type untuk discriminate -->
@@ -590,6 +621,10 @@ watch(
       v-model:open="showEditPersonalModal"
       title="Edit Profil Pribadi"
       description="Perbarui informasi data diri Anda di bawah ini."
+      :ui="{
+        content: 'rounded-[1.25rem] sm:rounded-[1.5rem] shadow-[0_28px_90px_rgba(15,23,42,0.26)] ring-1 ring-slate-900/10 dark:ring-white/10',
+        overlay: 'backdrop-blur-sm bg-slate-950/32'
+      }"
     >
       <template #body>
         <FeaturesProfileForm
@@ -606,6 +641,10 @@ watch(
       v-model:open="showEditProfessionalModal"
       title="Edit Data Profesional"
       description="Lengkapi atau perbarui informasi profesional Anda."
+      :ui="{
+        content: 'rounded-[1.25rem] sm:rounded-[1.5rem] shadow-[0_28px_90px_rgba(15,23,42,0.26)] ring-1 ring-slate-900/10 dark:ring-white/10',
+        overlay: 'backdrop-blur-sm bg-slate-950/32'
+      }"
     >
       <template #body>
         <div v-if="showEditProfessionalModal">
@@ -628,6 +667,10 @@ watch(
       v-model:open="showAvatarModal"
       title="Ganti Foto Profil"
       description="Pilih gambar baru untuk foto profil Anda."
+      :ui="{
+        content: 'rounded-[1.25rem] sm:rounded-[1.5rem] shadow-[0_28px_90px_rgba(15,23,42,0.26)] ring-1 ring-slate-900/10 dark:ring-white/10',
+        overlay: 'backdrop-blur-sm bg-slate-950/32'
+      }"
     >
       <template #body>
         <FeaturesProfileAvatarUpload
@@ -637,14 +680,10 @@ watch(
         />
       </template>
     </UModal>
-  </div>
+  </main>
 </template>
 
 <style scoped>
-.container {
-  max-width: 1200px;
-}
-
 /* FIX #6: Hapus '* { transition: all }' — sangat buruk untuk performa karena
    memaksa browser menghitung transisi untuk SEMUA properti di SEMUA elemen,
    termasuk layout properties seperti width/height yang mahal.
@@ -666,5 +705,13 @@ watch(
 
 ::-webkit-scrollbar-thumb:hover {
   background: #15803d;
+}
+</style>
+<style>
+@keyframes badge-sweep {
+  0% { transform: translateX(-200%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateX(280%); opacity: 0; }
 }
 </style>

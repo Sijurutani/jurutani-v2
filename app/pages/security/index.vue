@@ -137,29 +137,61 @@
 </script>
 
 <template>
-  <div class="min-h-screen py-12 px-4 transition-colors duration-200">
-    <div class="max-w-md mx-auto">
-      <!-- Header Section -->
-      <div class="text-center mb-8">
-        <div
-          class="inline-flex items-center justify-center w-16 h-16 bg-green-600 dark:bg-green-700 rounded-full mb-4 shadow-lg dark:shadow-green-900/50"
-        >
-          <UIcon name="i-lucide-lock" class="w-8 h-8 text-white" />
+  <main class="min-h-screen font-sans">
+    <!-- ════════ HERO ════════ -->
+    <header class="pt-32 pb-12 flex flex-col items-center text-center px-5">
+      <!-- Logo circle -->
+      <div class="flex justify-center mb-6">
+        <div class="w-16 h-16 rounded-full flex items-center justify-center shadow-lg bg-white dark:bg-gray-900/60 border border-green-100 dark:border-gray-700">
+          <NuxtImg
+            src="/jurutani/small-transparent.webp"
+            alt="JuruTani Logo"
+            class="w-10 h-10"
+            width="40"
+            height="40"
+          />
         </div>
-        <h1 class="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
-          Ganti Password
-        </h1>
-        <p class="text-gray-600 dark:text-gray-400 text-sm">
-          Pastikan password baru Anda kuat dan mudah diingat
-        </p>
       </div>
 
+      <!-- Badge -->
+      <div class="relative inline-flex items-center gap-1.5 px-3.5 py-1.5 mb-6
+                  bg-white/55 dark:bg-white/[0.08]
+                  border border-white/70 dark:border-white/[0.18]
+                  rounded-full backdrop-blur-md
+                  text-[0.7rem] font-bold tracking-widest uppercase
+                  text-emerald-700 dark:text-emerald-300
+                  shadow-[0_2px_12px_rgba(16,185,129,0.1)]
+                  overflow-hidden">
+        <span class="block w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
+        <span>Keamanan</span>
+        <span
+          class="absolute top-0 left-0 w-[55%] h-full pointer-events-none rounded-[inherit]"
+          style="background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%);
+                 animation: badge-sweep 3.5s ease-in-out infinite;"
+          aria-hidden="true"
+        />
+      </div>
+
+      <!-- Title -->
+      <h1 class="text-[clamp(2.25rem,5vw,3.75rem)] font-black leading-[1.1] tracking-tight text-gray-900 dark:text-gray-50 mb-5">
+        Keamanan<br />
+        <span class="bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
+          Akun
+        </span>
+      </h1>
+
+      <!-- Description -->
+      <p class="text-base leading-relaxed text-gray-500 dark:text-gray-400 max-w-[38rem]">
+        Pastikan akun Anda terlindungi dengan mengganti password secara berkala menggunakan kombinasi yang kuat.
+      </p>
+    </header>
+
+    <div class="max-w-md mx-auto px-5 sm:px-8 pb-20 sm:pb-24">
       <!-- Form Card -->
-      <div
-        class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/50 border border-gray-100 dark:border-gray-800 overflow-hidden transition-all duration-200"
-      >
-        <div class="p-6">
-      <UForm :schema="schema" :state="state" class="space-y-6" @submit="handleChangePassword">
+      <div class="p-7 rounded-2xl bg-white dark:bg-white/5 border border-emerald-100/70 dark:border-emerald-900/40 shadow-sm relative overflow-hidden transition-all duration-200">
+        <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-cyan-500/5 opacity-50" />
+        <div class="relative z-10">
+          <UForm :schema="schema" :state="state" class="space-y-6" @submit="handleChangePassword">
             <!-- Password Strength Info -->
             <div
               class="bg-blue-50 dark:bg-blue-950 rounded-lg p-4 border-l-4 border-blue-400 dark:border-blue-600 transition-colors duration-200"
@@ -270,12 +302,9 @@
               Simpan Password
             </UButton>
           </UForm>
-        </div>
 
-        <!-- Footer -->
-        <div
-          class="bg-gray-50 dark:bg-gray-800 px-6 py-4 border-t border-gray-100 dark:border-gray-700 transition-colors duration-200"
-        >
+          <!-- Footer -->
+          <div class="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800/50 transition-colors duration-200">
           <div class="flex items-center justify-between text-sm">
             <UButton
               color="neutral"
@@ -291,9 +320,19 @@
               <UIcon name="i-lucide-shield-check" class="w-4 h-4 mr-1" />
               <span>Enkripsi 256-bit</span>
             </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
+  </main>
 </template>
+
+<style>
+@keyframes badge-sweep {
+  0% { transform: translateX(-200%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateX(280%); opacity: 0; }
+}
+</style>

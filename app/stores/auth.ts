@@ -370,6 +370,7 @@ export const useAuthStore = defineStore('auth', () => {
     profileLoading,
     error: storeError, // expose sebagai 'error' agar API publik store tidak berubah
     user,
+    currentUserId,
     // getters
     isAuthenticated,
     avatarUrl,

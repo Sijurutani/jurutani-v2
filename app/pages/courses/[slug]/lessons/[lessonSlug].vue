@@ -63,7 +63,7 @@
 
   // ─── Computed ─────────────────────────────────────────────────────────────────
   const isLoggedIn = computed(() => !!authStore.user)
-  const userId = computed(() => authStore.user?.id)
+  const userId = computed(() => authStore.currentUserId)
 
   // Embeds dari lesson
   const embeds = computed(() => parseEmbeds(lesson.value?.embeds))

@@ -2,12 +2,14 @@
   import type { Database } from '~/types/database.types'
 
   const route = useRoute()
-  const profileId = route.params.id as string
+  const profileUsername = route.params.username as string
   const supabase = useSupabaseClient<Database>()
   const authStore = useAuthStore()
+  const toast = useToast()
+  const { createOrGetConversation } = useMessages()
 
-  // Navigation guards usually handle if it shouldn't be accessed, but we can do a simple check
-  if (authStore.user?.id === profileId) {
+  // Redirect if it matches current user
+  if (authStore.profileView?.username === profileUsername) {
     navigateTo('/profile')
   }
 
@@ -16,20 +18,27 @@
     data: userData,
     pending,
     error,
-  } = await useAsyncData(`profile-${profileId}`, async () => {
+  } = await useAsyncData(`profile-${profileUsername}`, async () => {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', profileId)
+      .eq('username', profileUsername)
       .single()
 
     if (error) throw error
     return data
   })
 
+  // Fallback check
+  watchEffect(() => {
+    if (userData.value && authStore.currentUserId === userData.value.id) {
+      navigateTo('/profile')
+    }
+  })
+
   const { data: professionalData, pending: professionalPending } =
     await useAsyncData(
-      `prof-${profileId}`,
+      `prof-${profileUsername}`,
       async () => {
         if (!userData.value) return null
         const role = userData.value.role
@@ -38,14 +47,14 @@
           const { data } = await supabase
             .from('experts')
             .select('*')
-            .eq('user_id', profileId)
+            .eq('user_id', userData.value.id)
             .maybeSingle()
           return { type: 'pakar', data }
         } else if (role === 'penyuluh') {
           const { data } = await supabase
             .from('instructors')
             .select('*')
-            .eq('user_id', profileId)
+            .eq('user_id', userData.value.id)
             .maybeSingle()
           return { type: 'penyuluh', data }
         }
@@ -78,9 +87,6 @@
     }
   }
 
-  const toast = useToast()
-  const { createOrGetConversation } = useMessages()
-
   const handleChat = async () => {
     if (!userData.value) return
     if (!authStore.isAuthenticated) {
@@ -101,8 +107,56 @@
 </script>
 
 <template>
-  <div class="min-h-screen py-12 transition-colors duration-200">
-    <div class="container mx-auto px-4 py-8">
+  <main class="min-h-screen font-sans">
+    <!-- ════════ HERO ════════ -->
+    <header class="pt-32 pb-12 flex flex-col items-center text-center px-5">
+      <!-- Logo circle -->
+      <div class="flex justify-center mb-6">
+        <div class="w-16 h-16 rounded-full flex items-center justify-center shadow-lg bg-white dark:bg-gray-900/60 border border-green-100 dark:border-gray-700">
+          <NuxtImg
+            src="/jurutani/small-transparent.webp"
+            alt="JuruTani Logo"
+            class="w-10 h-10"
+            width="40"
+            height="40"
+          />
+        </div>
+      </div>
+
+      <!-- Badge -->
+      <div class="relative inline-flex items-center gap-1.5 px-3.5 py-1.5 mb-6
+                  bg-white/55 dark:bg-white/[0.08]
+                  border border-white/70 dark:border-white/[0.18]
+                  rounded-full backdrop-blur-md
+                  text-[0.7rem] font-bold tracking-widest uppercase
+                  text-emerald-700 dark:text-emerald-300
+                  shadow-[0_2px_12px_rgba(16,185,129,0.1)]
+                  overflow-hidden">
+        <span class="block w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
+        <span>Profil Publik</span>
+        <span
+          class="absolute top-0 left-0 w-[55%] h-full pointer-events-none rounded-[inherit]"
+          style="background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%);
+                 animation: badge-sweep 3.5s ease-in-out infinite;"
+          aria-hidden="true"
+        />
+      </div>
+
+      <!-- Title -->
+      <h1 class="text-[clamp(2.25rem,5vw,3.75rem)] font-black leading-[1.1] tracking-tight text-gray-900 dark:text-gray-50 mb-5">
+        Profil<br />
+        <span class="bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
+          Pengguna
+        </span>
+      </h1>
+
+      <!-- Description -->
+      <p class="text-base leading-relaxed text-gray-500 dark:text-gray-400 max-w-[38rem]">
+        Lihat informasi dan latar belakang pengguna JuruTani secara lengkap.
+      </p>
+    </header>
+
+    <div class="max-w-[72rem] mx-auto px-5 sm:px-8 pb-20 sm:pb-24">
       <!-- Loading State -->
       <div v-if="pending" class="text-center py-16">
         <div
@@ -141,69 +195,64 @@
       <!-- Profile Content -->
       <div v-else class="max-w-4xl mx-auto">
         <!-- Profile Header Card -->
-        <div
-          class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/50 border border-gray-100 dark:border-gray-800 overflow-hidden transition-all duration-200 mb-6"
-        >
-          <div
-            class="bg-linear-to-r from-green-600 to-emerald-600 dark:from-green-700 dark:to-emerald-700 px-6 py-8 transition-all duration-200"
-          >
-            <div class="flex flex-col md:flex-row items-center">
-              <!-- Profile Image -->
-              <div class="relative mb-4 md:mb-0 md:mr-6">
-                <div
-                  class="w-32 h-32 rounded-full overflow-hidden bg-white dark:bg-gray-800 p-1 shadow-lg dark:shadow-black/50 shrink-0"
-                >
-                  <NuxtImg
-                    :src="userData.avatar_url || '//placeholder/user.webp'"
-                    :alt="userData.full_name || 'User'"
-                    class="w-full h-full object-cover rounded-full"
-                  />
-                </div>
-                <div
-                  class="absolute -bottom-2 -right-2 bg-white dark:bg-gray-800 rounded-full px-3 py-1 shadow-md dark:shadow-black/50 transition-all duration-200"
-                >
-                  <span
-                    class="text-xs font-semibold text-green-600 dark:text-green-400"
-                  >
-                    {{ userRoleLabel }}
-                  </span>
-                </div>
+        <div class="p-7 rounded-2xl bg-white dark:bg-white/5 border border-emerald-100/70 dark:border-emerald-900/40 shadow-sm relative overflow-hidden mb-6">
+          <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-cyan-500/5 opacity-50" />
+          <div class="relative z-10 flex flex-col md:flex-row items-center gap-6">
+            <!-- Avatar -->
+            <div class="relative shrink-0">
+              <div
+                class="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-white dark:bg-gray-900 p-1 shadow-md border border-gray-100 dark:border-gray-800"
+              >
+                <NuxtImg
+                  :src="userData.avatar_url || '//placeholder/user.webp'"
+                  :alt="userData.full_name || 'User'"
+                  class="w-full h-full object-cover rounded-full"
+                />
               </div>
+              <div
+                class="absolute -bottom-2 -left-2 bg-white dark:bg-gray-900 rounded-full px-3 py-1 shadow-sm border border-gray-200 dark:border-gray-700 transition-all duration-200"
+              >
+                <span
+                  class="text-[0.7rem] font-bold tracking-wider uppercase text-emerald-600 dark:text-emerald-400"
+                >
+                  {{ userRoleLabel }}
+                </span>
+              </div>
+            </div>
 
-              <!-- User Info -->
-              <div class="flex-1 text-center md:text-left text-white">
-                <h2 class="text-2xl font-bold mb-1">
-                  {{ userData.full_name || 'Pengguna JuruTani' }}
-                </h2>
-                <p class="text-green-100 dark:text-green-200 text-lg mb-2">
-                  @{{ userData.username || 'username' }}
-                </p>
-              </div>
+            <!-- User Info -->
+            <div class="flex-1 text-center md:text-left">
+              <h2 class="text-2xl font-bold mb-1 text-gray-900 dark:text-gray-100">
+                {{ userData.full_name || 'Pengguna JuruTani' }}
+              </h2>
+              <p class="text-emerald-600 dark:text-emerald-400 font-medium mb-2">
+                @{{ userData.username || 'username' }}
+              </p>
+            </div>
 
-              <!-- Action Area -->
-              <div class="mt-6 md:mt-0 flex">
-                <UButton
-                  color="neutral"
-                  variant="solid"
-                  size="lg"
-                  icon="i-lucide-message-square"
-                  @click="handleChat"
-                >
-                  Mulai Chat
-                </UButton>
-              </div>
+            <!-- Action Area -->
+            <div class="mt-4 md:mt-0">
+              <UButton
+                color="neutral"
+                variant="solid"
+                size="lg"
+                icon="i-lucide-message-square"
+                @click="handleChat"
+              >
+                Mulai Chat
+              </UButton>
             </div>
           </div>
         </div>
 
         <!-- Detail Information -->
-        <div
-          class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/50 border border-gray-100 dark:border-gray-800 overflow-hidden transition-all duration-200 p-6"
-        >
-          <div
-            v-if="userData.bio"
-            class="mb-6 p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-100 dark:border-green-800 transition-colors duration-200"
-          >
+        <div class="p-7 rounded-2xl bg-white dark:bg-white/5 border border-emerald-100/70 dark:border-emerald-900/40 shadow-sm relative overflow-hidden">
+          <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-cyan-500/5 opacity-50" />
+          <div class="relative z-10">
+            <div
+              v-if="userData.bio"
+              class="mb-6 p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-100 dark:border-green-800 transition-colors duration-200"
+            >
             <h3
               class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center"
             >
@@ -222,7 +271,7 @@
             <!-- Personal Info -->
             <div class="space-y-4">
               <h3
-                class="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b border-green-200 dark:border-green-800 pb-2 transition-colors duration-200"
+                class="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b border-emerald-100 dark:border-gray-800 pb-2 transition-colors duration-200"
               >
                 Informasi Pribadi
               </h3>
@@ -335,7 +384,7 @@
               class="space-y-4"
             >
               <h3
-                class="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b border-green-200 dark:border-green-800 pb-2 transition-colors duration-200"
+                class="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b border-emerald-100 dark:border-gray-800 pb-2 transition-colors duration-200"
               >
                 Bidang Profesional
               </h3>
@@ -416,13 +465,14 @@
       </div>
     </div>
   </div>
+</main>
 </template>
 
-<style scoped>
-  .container {
-    max-width: 1200px;
-  }
-  * {
-    transition: all 0.2s ease-in-out;
-  }
+<style>
+@keyframes badge-sweep {
+  0% { transform: translateX(-200%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateX(280%); opacity: 0; }
+}
 </style>
