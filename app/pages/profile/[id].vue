@@ -154,7 +154,7 @@
                   class="w-32 h-32 rounded-full overflow-hidden bg-white dark:bg-gray-800 p-1 shadow-lg dark:shadow-black/50 shrink-0"
                 >
                   <NuxtImg
-                    :src="userData.avatar_url || '/profile.webp'"
+                    :src="userData.avatar_url || '//placeholder/user.webp'"
                     :alt="userData.full_name || 'User'"
                     class="w-full h-full object-cover rounded-full"
                   />

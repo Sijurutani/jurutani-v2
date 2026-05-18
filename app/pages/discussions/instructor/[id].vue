@@ -198,7 +198,7 @@
               <!-- Profile Picture -->
               <div class="shrink-0">
                 <NuxtImg
-                  :src="instructor.profiles?.avatar_url || '/profile.webp'"
+                  :src="instructor.profiles?.avatar_url || '//placeholder/user.webp'"
                   :alt="instructor.profiles?.full_name"
                   class="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-white shadow-md object-cover transition-transform duration-300 hover:scale-105"
                   loading="lazy"

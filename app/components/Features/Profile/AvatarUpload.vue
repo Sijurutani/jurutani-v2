@@ -18,7 +18,7 @@ const errorMsg = ref<string | null>(null)
 // ─── Computed ─────────────────────────────────────────────────────────────────
 
 const currentAvatar = computed(
-  () => imagePreview.value || authStore.avatarUrl || '/profile.webp',
+  () => imagePreview.value || authStore.avatarUrl || '//placeholder/user.webp',
 )
 
 // ─── Drag & Drop ──────────────────────────────────────────────────────────────
@@ -108,7 +108,7 @@ const handleUpload = async () => {
 
 const handleImageError = (event: Event) => {
   const target = event?.target as HTMLImageElement | null
-  if (target) target.src = '/profile.webp'
+  if (target) target.src = '//placeholder/user.webp'
 }
 </script>
 

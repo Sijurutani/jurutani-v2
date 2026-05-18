@@ -157,7 +157,7 @@ const isValidUrl = (string?: string | null) => {
 
 const handleImageError = (event: Event) => {
   const target = event?.target as HTMLImageElement | null
-  if (target) target.src = '/profile.webp'
+  if (target) target.src = '//placeholder/user.webp'
 }
 
 // ─── Init ────────────────────────────────────────────────────────────────────
@@ -273,6 +273,12 @@ watch(
           </UButton>
         </div>
 
+        <!-- DEBUG SESSION (Diminta oleh User) -->
+        <div class="mb-6 p-4 bg-gray-900 rounded-xl overflow-auto text-xs text-green-400 font-mono shadow-inner border border-gray-700">
+          <p class="text-gray-300 mb-2 font-bold border-b border-gray-700 pb-2">DEBUG SESSION (useSupabaseUser):</p>
+          <pre>{{ JSON.stringify(authStore.user, null, 2) }}</pre>
+        </div>
+
         <!-- Profile header card -->
 
         <div
@@ -287,7 +293,7 @@ watch(
                   class="w-32 h-32 rounded-full overflow-hidden bg-white dark:bg-gray-800 p-1 shadow-lg dark:shadow-black/50"
                 >
                   <NuxtImg
-                    :src="userData.avatar_url || '/profile.webp'"
+                    :src="userData.avatar_url || '//placeholder/user.webp'"
                     :alt="userData.full_name || 'User'"
                     class="w-full h-full object-cover rounded-full"
                     @error="handleImageError"

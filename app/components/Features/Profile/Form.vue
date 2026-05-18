@@ -162,11 +162,11 @@
     }
   }
 
-  const currentAvatar = computed(() => imagePreview.value || state.avatar_url || '/profile.webp')
+  const currentAvatar = computed(() => imagePreview.value || state.avatar_url || '//placeholder/user.webp')
 
   const handleImageError = (event: Event) => {
     const target = event?.target as HTMLImageElement | null
-    if (target) target.src = '/profile.webp'
+    if (target) target.src = '//placeholder/user.webp'
   }
 </script>
 

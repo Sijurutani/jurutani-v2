@@ -213,7 +213,7 @@
             <!-- Avatar -->
             <div class="relative shrink-0">
               <NuxtImg
-                :src="expert.profiles?.avatar_url || '/profile.webp'"
+                :src="expert.profiles?.avatar_url || '//placeholder/user.webp'"
                 :alt="expert.profiles?.full_name"
                 class="w-32 h-32 rounded-2xl border-6 border-white shadow-xl object-cover bg-white dark:bg-gray-800"
                 loading="lazy"

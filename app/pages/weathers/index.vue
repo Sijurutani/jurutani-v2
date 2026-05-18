@@ -455,7 +455,7 @@
                   :alt="weatherData.weather[0].description"
                   class="w-28 h-28 drop-shadow-2xl md:w-36 md:h-36"
                   @error="
-                    (e) => ((e.target as HTMLImageElement).src = '/profile.webp')
+                    (e) => ((e.target as HTMLImageElement).src = '//placeholder/user.webp')
                   "
                 />
               </div>

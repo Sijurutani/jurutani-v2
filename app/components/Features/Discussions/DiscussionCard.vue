@@ -25,7 +25,7 @@
   })
 
   const avatarUrl = computed(() => {
-    return props.profile?.avatar_url || '/profile.webp'
+    return props.profile?.avatar_url || '/placeholder/user.webp'
   })
 
   const authStore = useAuthStore()
