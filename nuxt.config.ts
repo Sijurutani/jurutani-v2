@@ -10,6 +10,32 @@ export default defineNuxtConfig({
     appManifest: false,
   },
 
+  // ─── Route Rules (Hybrid Rendering) ───────────────────────────────────────
+  routeRules: {
+    // 1. Static Pages (Prerendered saat build time)
+    '/about-us': { prerender: true },
+    '/contact-us': { prerender: true },
+    '/help-faqs': { prerender: true },
+    '/privacy-policy': { prerender: true },
+    '/terms': { prerender: true },
+    '/auth/**': { prerender: true },
+    '/discussions': { prerender: true },
+    '/discussions/group': { prerender: true },
+    '/tools': { prerender: true },
+
+    // 2. Client-Side Only (Meringankan beban server untuk halaman privat)
+    '/profile/**': { ssr: false },
+    '/setting/**': { ssr: false },
+    '/security/**': { ssr: false },
+    '/messages/**': { ssr: false },
+    '/history/**': { ssr: false },
+    '/update/**': { ssr: false },
+
+    // 3. SSR dengan SWR / Caching (Opsional)
+    '/food-prices/**': { swr: 3600 },
+    '/weathers/**': { swr: 1800 },
+  },
+
   // ─── Modules ─────────────────────────────────────────────────────────────
   modules: [
     '@nuxt/ui',
