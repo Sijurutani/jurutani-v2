@@ -10,6 +10,12 @@ export default defineNuxtConfig({
     appManifest: false,
   },
 
+  // Matikan sourcemap di production untuk menghemat memori saat build
+  sourcemap: {
+    server: false,
+    client: false,
+  },
+
   // ─── Route Rules (Hybrid Rendering) ───────────────────────────────────────
   routeRules: {
     // 1. Static Pages (Prerendered saat build time)
