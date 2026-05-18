@@ -50,7 +50,7 @@
           class="flex items-center sm:flex-row"
           to="/"
         >
-          <NuxtImg src="/jurutani_long_logo.webp" alt="Logo" class="h-10" />
+          <NuxtImg src="/jurutani/long-transparent.webp" alt="Logo" class="h-10" />
         </NuxtLink>
       </div>
     </template>
