@@ -308,10 +308,10 @@ watch(
         </div>
 
         <!-- DEBUG SESSION (Diminta oleh User) -->
-        <div class="mb-6 p-4 bg-gray-900 rounded-xl overflow-auto text-xs text-green-400 font-mono shadow-inner border border-gray-700">
+        <!-- <div class="mb-6 p-4 bg-gray-900 rounded-xl overflow-auto text-xs text-green-400 font-mono shadow-inner border border-gray-700">
           <p class="text-gray-300 mb-2 font-bold border-b border-gray-700 pb-2">DEBUG SESSION (useSupabaseUser):</p>
           <pre>{{ JSON.stringify(authStore.user, null, 2) }}</pre>
-        </div>
+        </div> -->
 
         <div class="p-7 rounded-2xl bg-white dark:bg-white/5 border border-emerald-100/70 dark:border-emerald-900/40 shadow-sm relative overflow-hidden mb-6">
           <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-cyan-500/5 opacity-50" />
